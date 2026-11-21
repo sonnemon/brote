@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { AppState } from 'react-native';
 
+import { subscribeLang } from '@/i18n';
 import {
   notificationRoute,
   parseTime,
@@ -130,6 +131,8 @@ export function initReminders(): () => void {
 
   const unsubscribeGoals = subscribeGoals(requestReschedule);
   const unsubscribeAccount = subscribeAccount(requestReschedule);
+  // Los textos de las notificaciones cambian con el idioma.
+  const unsubscribeLang = subscribeLang(requestReschedule);
   const appState = AppState.addEventListener('change', (state) => {
     if (state === 'active') requestReschedule();
   });
@@ -139,6 +142,7 @@ export function initReminders(): () => void {
     response.remove();
     unsubscribeGoals();
     unsubscribeAccount();
+    unsubscribeLang();
     appState.remove();
   };
 }

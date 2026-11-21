@@ -1,19 +1,31 @@
-export type PlanId = 'annual' | 'monthly';
+const DAY_MS = 86_400_000;
 
-export type Plan = {
-  id: PlanId;
-  title: string;
-  price: string;
-  note?: string;
-  badge?: string;
-  cta: string;
-};
+export type PlanId = 'lifetime';
 
-/** Precios de lista; con RevenueCat vendrán de las offerings de App Store. */
-export const PLANS: readonly Plan[] = [
-  { id: 'annual', title: 'Anual', price: 'S/ 59.90', note: 'S/ 4.99 al mes', badge: 'AHORRA 50%', cta: 'Activar Plus anual' },
-  { id: 'monthly', title: 'Mensual', price: 'S/ 9.90', cta: 'Activar Plus mensual' },
-];
+/** Días de prueba gratis desde la primera vez que se abre la app. */
+export const TRIAL_DAYS = 7;
+
+/** Una compra de por vida se guarda como una fecha "infinita" para reutilizar isPlusActive. */
+export const LIFETIME_UNTIL = '9999-12-31T00:00:00.000Z';
+
+/** Precio de lista; con RevenueCat vendrá localizado desde App Store. Soles en Perú, dólares en el resto. */
+export function lifetimePrice(currencyCode: string | null | undefined): string {
+  return currencyCode === 'PEN' ? 'S/ 49.90' : 'US$12.99';
+}
+
+export function trialEndsAt(startedAt: string): Date {
+  return new Date(new Date(startedAt).getTime() + TRIAL_DAYS * DAY_MS);
+}
+
+export function isTrialActive(startedAt: string, now: Date): boolean {
+  return now < trialEndsAt(startedAt);
+}
+
+/** Días que quedan de prueba, redondeando hacia arriba (el último día cuenta como 1). 0 si ya terminó. */
+export function trialDaysLeft(startedAt: string, now: Date): number {
+  const ms = trialEndsAt(startedAt).getTime() - now.getTime();
+  return ms > 0 ? Math.ceil(ms / DAY_MS) : 0;
+}
 
 /** Contrato que implementará RevenueCat. Ambos métodos devuelven hasta cuándo dura Plus. */
 export interface PurchasesProvider {
@@ -23,21 +35,29 @@ export interface PurchasesProvider {
 
 export class PurchasesUnavailableError extends Error {}
 
+/** El usuario cerró la hoja de compra de la tienda: no es un error que haya que mostrar. */
+export class PurchaseCancelledError extends Error {}
+
+/**
+ * Convierte el entitlement de RevenueCat en "hasta cuándo dura Pro".
+ * Sin entitlement activo, null; de por vida (sin vencimiento), LIFETIME_UNTIL.
+ */
+export function untilFromEntitlement(entitlement: { expirationDate: string | null } | undefined): string | null {
+  if (!entitlement) return null;
+  return entitlement.expirationDate ?? LIFETIME_UNTIL;
+}
+
 export type DevStorage = {
   get(): string | null;
   set(value: string): void;
 };
 
-const DAY_MS = 86_400_000;
-
-/** Stub de desarrollo: simula la compra sin cobrar. Nunca debe usarse en producción. */
-export function createDevPurchases(storage: DevStorage, now: () => Date = () => new Date()): PurchasesProvider {
+/** Stub de desarrollo: simula la compra de por vida sin cobrar. Nunca debe usarse en producción. */
+export function createDevPurchases(storage: DevStorage): PurchasesProvider {
   return {
-    async purchase(plan) {
-      const days = plan === 'annual' ? 365 : 30;
-      const until = new Date(now().getTime() + days * DAY_MS).toISOString();
-      storage.set(until);
-      return until;
+    async purchase() {
+      storage.set(LIFETIME_UNTIL);
+      return LIFETIME_UNTIL;
     },
     async restore() {
       return storage.get();

@@ -1,23 +1,25 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Milestone, ShieldCheck, TrendingUpDown, type LucideIcon } from 'lucide-react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { Icon, type UiIconName } from '@/components/Icon';
 import { NebulaBackground } from '@/components/NebulaBackground';
 import { Ring } from '@/components/Ring';
 import { T } from '@/components/T';
 import { markOnboarded } from '@/db/store';
-import { alpha, colors } from '@/theme/tokens';
+import { useStrings } from '@/i18n';
+import { alpha, brandFont, colors } from '@/theme/tokens';
 
-const FEATURES: { icon: UiIconName; color: string; label: string }[] = [
-  { icon: 'arrows', color: colors.lilac, label: 'Metas crecientes o decrecientes' },
-  { icon: 'flag', color: colors.pink, label: 'Empieza en 0 o a mitad de camino' },
-  { icon: 'phone', color: colors.cyan, label: 'Tus datos se quedan en tu celular' },
+const FEATURES: { icon: LucideIcon; color: string }[] = [
+  { icon: TrendingUpDown, color: colors.lilac },
+  { icon: Milestone, color: colors.pink },
+  { icon: ShieldCheck, color: colors.cyan },
 ];
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const s = useStrings();
 
   const start = () => {
     markOnboarded();
@@ -31,9 +33,9 @@ export default function OnboardingScreen() {
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.hero}>
           <Ring progress={0.68} size={260} strokeWidth={14}>
-            <Icon name="orbit" size={30} color={colors.lilac} strokeWidth={1.8} />
-            <T size={30} weight={600} tracking={-0.02}>
-              Orbe
+            <Image source={require('../assets/icons/logo.png')} style={styles.logo} accessibilityIgnoresInvertColors />
+            <T size={40} tracking={-0.01} glow style={styles.wordmark}>
+              Brote
             </T>
           </Ring>
         </View>
@@ -41,34 +43,43 @@ export default function OnboardingScreen() {
         <View style={styles.bottom}>
           <View style={styles.copy}>
             <T size={34} weight={600} tracking={-0.02} color={colors.textStrong}>
-              Mide lo que importa.
+              {s.onboarding.headline}
             </T>
             <T size={16} color={colors.textSecondary} style={styles.lead}>
-              Crea una meta que suba o baje, empieza desde donde estás y mírala llenarse.
+              {s.onboarding.lead}
             </T>
           </View>
 
           <View style={styles.features}>
-            {FEATURES.map((feature) => (
-              <View key={feature.label} style={styles.feature}>
+            {FEATURES.map((feature, i) => (
+              <View key={i} style={styles.feature}>
                 <View
                   style={[
                     styles.featureIcon,
                     { backgroundColor: alpha(feature.color, 0.12), borderColor: alpha(feature.color, 0.24) },
                   ]}
                 >
-                  <Icon name={feature.icon} size={18} color={feature.color} />
+                  <feature.icon size={18} color={feature.color} strokeWidth={2} />
                 </View>
-                <T size={15}>{feature.label}</T>
+                <T size={15}>{s.onboarding.features[i]}</T>
               </View>
             ))}
           </View>
 
           <View style={styles.cta}>
-            <Button title="Crear mi primera meta" onPress={start} style={styles.button} />
+            <Button title={s.onboarding.cta} onPress={start} style={styles.button} />
             <T size={12} color={colors.textTertiary}>
-              Gratis y sin cuenta. Respaldo en la nube con Plus.
+              {s.onboarding.footnote}
             </T>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => router.push({ pathname: '/auth', params: { mode: 'signin', from: 'onboarding' } })}
+            >
+              <T size={13} color={colors.textSecondary}>
+                {s.onboarding.haveAccount} <T size={13} weight={600} color={colors.lilac}>{s.onboarding.signIn}</T>
+              </T>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -80,6 +91,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { flex: 1, paddingHorizontal: 24, justifyContent: 'space-between' },
   hero: { alignItems: 'center' },
+  logo: { width: 112, height: 112, marginBottom: 2 },
+  wordmark: { fontFamily: brandFont, lineHeight: 46 },
   bottom: { gap: 24 },
   copy: { gap: 10 },
   lead: { lineHeight: 24 },

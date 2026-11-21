@@ -23,7 +23,7 @@ struct OrbeSnapshot: Codable {
   /// Se muestra en la galería de widgets.
   static let sample = OrbeSnapshot(
     goalId: "",
-    name: "Peso",
+    name: L.t("Peso", "Weight"),
     valueText: "78.4",
     unit: "kg",
     percent: 51,
@@ -49,10 +49,46 @@ struct OrbeSnapshot: Codable {
   }
 }
 
+/// Textos del widget en el idioma de la app (la app guarda "es" o "en" en el App Group).
+/// Sin ese dato, sigue el idioma del sistema.
+enum L {
+  static var isEnglish: Bool {
+    if let lang = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_lang") {
+      return lang == "en"
+    }
+    return !(Locale.preferredLanguages.first ?? "es").hasPrefix("es")
+  }
+
+  static func t(_ es: String, _ en: String) -> String { isEnglish ? en : es }
+
+  static func days(_ n: Int) -> String {
+    isEnglish ? "\(n) \(n == 1 ? "day" : "days")" : "\(n) \(n == 1 ? "día" : "días")"
+  }
+}
+
+/// Hasta cuándo hay Pro (fin de la prueba gratis o compra). La app lo escribe en el App Group;
+/// vacío o vencido significa que los widgets se muestran bloqueados.
+enum ProAccess {
+  static func until() -> Date? {
+    guard let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_pro_until"), !text.isEmpty
+    else { return nil }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter.date(from: text) ?? ISO8601DateFormatter().date(from: text)
+  }
+
+  static func isLocked(at date: Date) -> Bool {
+    guard let until = until() else { return true }
+    return date >= until
+  }
+}
+
 struct OrbeEntry: TimelineEntry {
   let date: Date
   /// Nil cuando el usuario aún no tiene metas.
   let snapshot: OrbeSnapshot?
+  /// Sin Pro (la prueba terminó y no compró): se muestra "Toca para desbloquear".
+  var locked = false
 }
 
 /// La app avisa con `reloadWidget` cada vez que cambian los datos.
@@ -62,11 +98,23 @@ struct OrbeProvider: TimelineProvider {
   }
 
   func getSnapshot(in context: Context, completion: @escaping (OrbeEntry) -> Void) {
-    completion(OrbeEntry(date: .now, snapshot: context.isPreview ? (OrbeSnapshot.load() ?? .sample) : OrbeSnapshot.load()))
+    // La galería siempre muestra el widget con datos, para que se vea qué se desbloquea.
+    if context.isPreview {
+      completion(OrbeEntry(date: .now, snapshot: OrbeSnapshot.load() ?? .sample))
+    } else {
+      completion(OrbeEntry(date: .now, snapshot: OrbeSnapshot.load(), locked: ProAccess.isLocked(at: .now)))
+    }
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<OrbeEntry>) -> Void) {
-    completion(Timeline(entries: [OrbeEntry(date: .now, snapshot: OrbeSnapshot.load())], policy: .never))
+    let now = Date.now
+    let snapshot = OrbeSnapshot.load()
+    var entries = [OrbeEntry(date: now, snapshot: snapshot, locked: ProAccess.isLocked(at: now))]
+    // Al terminar la prueba el widget se bloquea solo, aunque la app no se abra.
+    if let until = ProAccess.until(), until > now {
+      entries.append(OrbeEntry(date: until, snapshot: snapshot, locked: true))
+    }
+    completion(Timeline(entries: entries, policy: .never))
   }
 }
 

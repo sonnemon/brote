@@ -28,8 +28,8 @@ struct ValueView: View {
 struct ValueWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "OrbeValue", provider: OrbeProvider()) { ValueView(entry: $0) }
-      .configurationDisplayName("Valor actual")
-      .description("Tu número de hoy y cuánto has avanzado.")
+      .configurationDisplayName(L.t("Valor actual", "Current value"))
+      .description(L.t("Tu número de hoy y cuánto has avanzado.", "Today's number and how far you've come."))
       .supportedFamilies([.systemSmall, .accessoryRectangular, .accessoryInline])
   }
 }
@@ -50,8 +50,8 @@ struct RingView: View {
 struct RingWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "OrbeRing", provider: OrbeProvider()) { RingView(entry: $0) }
-      .configurationDisplayName("Anillo de meta")
-      .description("El porcentaje de tu meta. Ideal para StandBy.")
+      .configurationDisplayName(L.t("Anillo de meta", "Goal ring"))
+      .description(L.t("El porcentaje de tu meta. Ideal para StandBy.", "Your goal percentage. Great for StandBy."))
       .supportedFamilies([.systemSmall, .accessoryCircular])
   }
 }
@@ -72,8 +72,8 @@ struct TrendView: View {
 struct TrendWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "OrbeTrend", provider: OrbeProvider()) { TrendView(entry: $0) }
-      .configurationDisplayName("Tendencia")
-      .description("Cómo va tu meta en las últimas 8 semanas.")
+      .configurationDisplayName(L.t("Tendencia", "Trend"))
+      .description(L.t("Cómo va tu meta en las últimas 8 semanas.", "How your goal has gone over the last 8 weeks."))
       .supportedFamilies([.systemMedium, .accessoryRectangular])
   }
 }
@@ -83,8 +83,8 @@ struct SummaryWidget: Widget {
     StaticConfiguration(kind: "OrbeSummary", provider: OrbeProvider()) { entry in
       HomeWidget(entry: entry) { LargeSummaryView(snapshot: $0) }
     }
-    .configurationDisplayName("Resumen")
-    .description("Valor, racha, ritmo y tendencia.")
+    .configurationDisplayName(L.t("Resumen", "Summary"))
+    .description(L.t("Valor, racha, ritmo y tendencia.", "Value, streak, pace and trend."))
     .supportedFamilies([.systemLarge])
   }
 }
@@ -94,8 +94,8 @@ struct StreakWidget: Widget {
     StaticConfiguration(kind: "OrbeStreak", provider: OrbeProvider()) { entry in
       LockWidget(entry: entry) { CircularStreakView(snapshot: $0) }
     }
-    .configurationDisplayName("Racha")
-    .description("Tus días de racha en la pantalla bloqueada.")
+    .configurationDisplayName(L.t("Racha", "Streak"))
+    .description(L.t("Tus días de racha en la pantalla bloqueada.", "Your streak days on the Lock Screen."))
     .supportedFamilies([.accessoryCircular])
   }
 }

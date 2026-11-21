@@ -1,13 +1,15 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ColorField } from '@/components/ColorPicker';
 import { GlassCard } from '@/components/GlassCard';
 import { Icon, type UiIconName } from '@/components/Icon';
+import { IconButton } from '@/components/IconPicker';
 import { Section } from '@/components/ListGroup';
 import { NebulaBackground } from '@/components/NebulaBackground';
 import { ReminderRow } from '@/components/ReminderRow';
@@ -18,16 +20,15 @@ import { Field, ProgressBar, RoundButton, Segmented, StepBars } from '@/componen
 import { createGoal } from '@/db/store';
 import { formatFullDate, formatPercent, formatSignedValue, formatValue, parseDecimal } from '@/lib/format';
 import { draftCurrent, draftToInput, validateFrom, validateWhat, type GoalDraft } from '@/lib/goalDraft';
+import { DEFAULT_ICON, suggestIcons, withCurrent } from '@/lib/goalIcons';
 import { computeProgress, suggestedPace, weeksUntil, type Direction, type Frequency } from '@/lib/progress';
-import { colors, goalColors } from '@/theme/tokens';
+import { useStrings } from '@/i18n';
+import { colors } from '@/theme/tokens';
 
-const UNITS = ['kg', 'km', 'S/', 'páginas', 'horas', '%'];
+/** Unidades rápidas; páginas y horas se muestran (y se guardan) en el idioma activo. */
+const unitsFor = (s: { units: { pages: string; hours: string } }) => ['kg', 'km', 'S/', s.units.pages, s.units.hours, '%'];
 const PRESETS = [0, 0.25, 0.5, 0.75];
-const FREQUENCIES: { value: Frequency; label: string }[] = [
-  { value: 'daily', label: 'Diario' },
-  { value: 'weekly', label: 'Semanal' },
-  { value: 'free', label: 'Libre' },
-];
+const FREQUENCY_VALUES: Frequency[] = ['daily', 'weekly', 'free'];
 const DEFAULT_WEEKS = 12;
 
 type Patch = (patch: Partial<GoalDraft>) => void;
@@ -38,6 +39,8 @@ function initialDraft(): GoalDraft {
     direction: 'up',
     unit: 'kg',
     color: colors.lilac,
+    icon: DEFAULT_ICON,
+    iconAuto: true,
     startText: '0',
     targetText: '',
     hasProgress: false,
@@ -52,11 +55,17 @@ function initialDraft(): GoalDraft {
 
 export default function NewGoalScreen() {
   const insets = useSafeAreaInsets();
+  const s = useStrings();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState(initialDraft);
   const [showError, setShowError] = useState(false);
   const update: Patch = (patch) => {
-    setDraft((prev) => ({ ...prev, ...patch }));
+    setDraft((prev) => {
+      const next = { ...prev, ...patch };
+      // Mientras el usuario no elija uno, el icono sigue al nombre.
+      if (next.iconAuto && 'name' in patch) next.icon = suggestIcons(next.name)[0];
+      return next;
+    });
     setShowError(false);
   };
 
@@ -84,9 +93,9 @@ export default function NewGoalScreen() {
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
           <View style={styles.nav}>
-            <RoundButton icon={step === 1 ? 'close' : 'back'} label={step === 1 ? 'Cerrar' : 'Atrás'} onPress={goBack} />
+            <RoundButton icon={step === 1 ? 'close' : 'back'} label={step === 1 ? s.common.close : s.common.back} onPress={goBack} />
             <T size={16} weight={600}>
-              Nueva meta
+              {s.newGoal.title}
             </T>
             <T size={13} color={colors.textSecondary} style={styles.counter}>
               {step} / 3
@@ -112,7 +121,7 @@ export default function NewGoalScreen() {
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Button title={step === 3 ? 'Crear meta' : 'Continuar'} onPress={next} />
+          <Button title={step === 3 ? s.newGoal.create : s.newGoal.continue} onPress={next} />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -136,28 +145,40 @@ function Label({ children }: { children: string }) {
 }
 
 function StepWhat({ draft, update }: { draft: GoalDraft; update: Patch }) {
+  const s = useStrings();
+  const UNITS = unitsFor(s);
   const [customUnit, setCustomUnit] = useState(() => !UNITS.includes(draft.unit));
+  const suggestions = useMemo(() => withCurrent(suggestIcons(draft.name), draft.icon), [draft.name, draft.icon]);
+  const pickIcon = (icon: string) => update({ icon, iconAuto: false });
 
   return (
     <>
-      <Title>¿Qué quieres lograr?</Title>
-      <Field
-        label="Nombre"
-        value={draft.name}
-        onChangeText={(name) => update({ name })}
-        placeholder="Ej. Viaje a Cusco"
-        returnKeyType="done"
-        maxLength={40}
-      />
+      <Title>{s.newGoal.whatTitle}</Title>
+      <View style={styles.group}>
+        <Label>{s.newGoal.name}</Label>
+        <View style={styles.nameRow}>
+          <View style={styles.flex}>
+            <Field
+              accessibilityLabel={s.newGoal.name}
+              value={draft.name}
+              onChangeText={(name) => update({ name })}
+              placeholder={s.newGoal.namePlaceholder}
+              returnKeyType="done"
+              maxLength={40}
+            />
+          </View>
+          <IconButton value={draft.icon} color={draft.color} suggestions={suggestions} onChange={pickIcon} />
+        </View>
+      </View>
 
       <View style={styles.group}>
-        <Label>Tipo</Label>
+        <Label>{s.newGoal.type}</Label>
         <View style={styles.row}>
           <DirectionCard
             direction="up"
             selected={draft.direction === 'up'}
-            title="Creciente"
-            description="Subir un número: ahorro, km, libros"
+            title={s.common.increasing}
+            description={s.newGoal.upDescription}
             icon="trendUp"
             color={colors.pink}
             onPress={() => update({ direction: 'up' })}
@@ -165,8 +186,8 @@ function StepWhat({ draft, update }: { draft: GoalDraft; update: Patch }) {
           <DirectionCard
             direction="down"
             selected={draft.direction === 'down'}
-            title="Decreciente"
-            description="Bajar un número: peso, deudas, horas"
+            title={s.common.decreasing}
+            description={s.newGoal.downDescription}
             icon="trendDown"
             color={colors.lilac}
             onPress={() => update({ direction: 'down' })}
@@ -175,7 +196,7 @@ function StepWhat({ draft, update }: { draft: GoalDraft; update: Patch }) {
       </View>
 
       <View style={styles.group}>
-        <Label>Unidad</Label>
+        <Label>{s.newGoal.unit}</Label>
         <View style={styles.wrap}>
           {UNITS.map((unit) => (
             <Chip
@@ -189,7 +210,7 @@ function StepWhat({ draft, update }: { draft: GoalDraft; update: Patch }) {
             />
           ))}
           <Chip
-            label="Otra…"
+            label={s.units.other}
             dashed
             selected={customUnit}
             onPress={() => {
@@ -199,27 +220,13 @@ function StepWhat({ draft, update }: { draft: GoalDraft; update: Patch }) {
           />
         </View>
         {customUnit && (
-          <Field value={draft.unit} onChangeText={(unit) => update({ unit })} placeholder="Ej. pasos" maxLength={12} autoFocus />
+          <Field value={draft.unit} onChangeText={(unit) => update({ unit })} placeholder={s.units.otherPlaceholder} maxLength={12} autoFocus />
         )}
       </View>
 
       <View style={styles.group}>
-        <Label>Color</Label>
-        <View style={styles.colors}>
-          {goalColors.map(({ value, label }) => {
-            const selected = draft.color === value;
-            return (
-              <Pressable
-                key={value}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-                accessibilityState={{ selected }}
-                onPress={() => update({ color: value })}
-                style={[styles.color, { backgroundColor: value }, selected && styles.colorSelected]}
-              />
-            );
-          })}
-        </View>
+        <Label>{s.newGoal.color}</Label>
+        <ColorField value={draft.color} icon={draft.icon} onChange={(color) => update({ color })} />
       </View>
     </>
   );
@@ -270,20 +277,21 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
   const complete = Number.isFinite(start) && Number.isFinite(target) && Number.isFinite(current);
   const progress = complete ? computeProgress(start, target, current) : 0;
   const unit = draft.unit;
+  const s = useStrings();
 
   return (
     <>
       <View style={styles.titleGroup}>
-        <Title>¿Desde dónde partes?</Title>
+        <Title>{s.newGoal.fromTitle}</Title>
         <T size={14} color={colors.textSecondary} style={styles.lead}>
-          Tu progreso se mide entre el valor inicial y tu objetivo.
+          {s.newGoal.fromLead}
         </T>
       </View>
 
       <View style={styles.row}>
         <View style={styles.flex}>
           <Field
-            label="Valor inicial"
+            label={s.newGoal.startValue}
             value={draft.startText}
             onChangeText={(startText) => update({ startText })}
             keyboardType="decimal-pad"
@@ -292,7 +300,7 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
         </View>
         <View style={styles.flex}>
           <Field
-            label="Objetivo"
+            label={s.newGoal.target}
             value={draft.targetText}
             onChangeText={(targetText) => update({ targetText })}
             keyboardType="decimal-pad"
@@ -304,14 +312,14 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
       <View style={styles.settingRow}>
         <View style={styles.settingText}>
           <T size={15} weight={600}>
-            Ya tengo avance
+            {s.newGoal.hasProgress}
           </T>
           <T size={12} color={colors.textSecondary}>
-            Empieza a mitad de camino
+            {s.newGoal.hasProgressHint}
           </T>
         </View>
         <Toggle
-          label="Ya tengo avance"
+          label={s.newGoal.hasProgress}
           value={draft.hasProgress}
           onChange={(hasProgress) =>
             update({ hasProgress, presetFraction: hasProgress ? 0.25 : null, currentText: '' })
@@ -322,7 +330,7 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
       {draft.hasProgress && (
         <>
           <View style={styles.group}>
-            <Label>¿Cuánto llevas?</Label>
+            <Label>{s.newGoal.howMuch}</Label>
             <View style={styles.row8}>
               {PRESETS.map((fraction) => (
                 <Chip
@@ -336,7 +344,7 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
             </View>
           </View>
           <Field
-            label="Valor actual"
+            label={s.newGoal.currentValue}
             value={draft.presetFraction !== null ? (Number.isFinite(current) ? String(current) : '') : draft.currentText}
             onChangeText={(currentText) => update({ currentText, presetFraction: null })}
             keyboardType="decimal-pad"
@@ -348,7 +356,7 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
       <GlassCard radius={22} style={styles.previewCard}>
         <View style={styles.previewHead}>
           <T size={13} color={colors.textSecondary}>
-            Así empieza tu meta
+            {s.newGoal.previewTitle}
           </T>
           <T size={22} weight={600} color={colors.textStrong} glow>
             {formatPercent(progress)}
@@ -360,13 +368,13 @@ function StepFrom({ draft, update }: { draft: GoalDraft; update: Patch }) {
         {complete && (
           <View style={styles.previewLabels}>
             <T size={12} color={colors.textTertiary}>
-              Inicio {formatValue(start, unit)}
+              {s.newGoal.previewStart} {formatValue(start, unit)}
             </T>
             <T size={12} color={colors.lilacSoft}>
-              Hoy {formatValue(current, unit)}
+              {s.newGoal.previewToday} {formatValue(current, unit)}
             </T>
             <T size={12} color={colors.textTertiary}>
-              Meta {formatValue(target, unit)}
+              {s.newGoal.previewGoal} {formatValue(target, unit)}
             </T>
           </View>
         )}
@@ -383,17 +391,19 @@ function StepWhen({ draft, update }: { draft: GoalDraft; update: Patch }) {
   const progress = computeProgress(start, target, current);
   const pace = suggestedPace(target, current, draft.hasDeadline ? draft.deadline : null, now);
   const weeks = Math.round(weeksUntil(draft.deadline, now));
+  const s = useStrings();
+  const frequencies = FREQUENCY_VALUES.map((value) => ({ value, label: s.frequency[value] }));
 
   return (
     <>
-      <Title>¿Para cuándo?</Title>
+      <Title>{s.newGoal.whenTitle}</Title>
 
       <View style={styles.groupCard}>
         <View style={[styles.cardRow, styles.separator]}>
           <T size={15} weight={600}>
-            Fecha límite
+            {s.newGoal.deadline}
           </T>
-          <Toggle label="Fecha límite" value={draft.hasDeadline} onChange={(hasDeadline) => update({ hasDeadline })} />
+          <Toggle label={s.newGoal.deadline} value={draft.hasDeadline} onChange={(hasDeadline) => update({ hasDeadline })} />
         </View>
         {draft.hasDeadline && (
           <View style={styles.cardRow}>
@@ -403,20 +413,20 @@ function StepWhen({ draft, update }: { draft: GoalDraft; update: Patch }) {
               display="compact"
               themeVariant="dark"
               accentColor={colors.lilac}
-              locale="es-PE"
+              locale={s.locale}
               minimumDate={new Date(now.getTime() + 86_400_000)}
               onValueChange={(_, deadline) => update({ deadline })}
             />
             <T size={13} color={colors.textTertiary}>
-              {weeks} {weeks === 1 ? 'semana' : 'semanas'}
+              {s.common.weeks(weeks)}
             </T>
           </View>
         )}
       </View>
 
       <View style={styles.group}>
-        <Label>¿Cada cuánto registras?</Label>
-        <Segmented options={FREQUENCIES} value={draft.frequency} onChange={(frequency) => update({ frequency })} />
+        <Label>{s.newGoal.frequency}</Label>
+        <Segmented options={frequencies} value={draft.frequency} onChange={(frequency) => update({ frequency })} />
       </View>
 
       <Section>
@@ -432,7 +442,7 @@ function StepWhen({ draft, update }: { draft: GoalDraft; update: Patch }) {
         <View style={styles.summaryHead}>
           <View style={styles.settingText}>
             <T size={12} tracking={0.12} color={colors.textTertiary}>
-              RESUMEN
+              {s.newGoal.summary}
             </T>
             <T size={18} weight={600} numberOfLines={1}>
               {draft.name}
@@ -444,13 +454,13 @@ function StepWhen({ draft, update }: { draft: GoalDraft; update: Patch }) {
             </T>
           </Ring>
         </View>
-        <SummaryRow label="Dirección" value={draft.direction === 'down' ? '▼ Decreciente' : '▲ Creciente'} color={colors.lilac} />
-        <SummaryRow label="Rango" value={`${formatValue(start, draft.unit)} → ${formatValue(target, draft.unit)}`} />
-        <SummaryRow label="Empiezas en" value={formatValue(current, draft.unit)} />
+        <SummaryRow label={s.newGoal.direction} value={draft.direction === 'down' ? s.common.decreasingArrow : s.common.increasingArrow} color={colors.lilac} />
+        <SummaryRow label={s.newGoal.range} value={`${formatValue(start, draft.unit)} → ${formatValue(target, draft.unit)}`} />
+        <SummaryRow label={s.newGoal.startsAt} value={formatValue(current, draft.unit)} />
         {pace !== null && (
-          <SummaryRow label="Ritmo sugerido" value={`${formatSignedValue(pace, draft.unit)} / semana`} color={colors.cyan} />
+          <SummaryRow label={s.newGoal.pace} value={`${formatSignedValue(pace, draft.unit)} ${s.newGoal.perWeek}`} color={colors.cyan} />
         )}
-        {draft.hasDeadline && <SummaryRow label="Fecha límite" value={formatFullDate(draft.deadline)} />}
+        {draft.hasDeadline && <SummaryRow label={s.newGoal.deadline} value={formatFullDate(draft.deadline)} />}
       </GlassCard>
     </>
   );
@@ -481,11 +491,9 @@ const styles = StyleSheet.create({
   lead: { lineHeight: 20 },
   group: { gap: 8 },
   row: { flexDirection: 'row', gap: 12 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   row8: { flexDirection: 'row', gap: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  colors: { flexDirection: 'row', gap: 14 },
-  color: { width: 44, height: 44, borderRadius: 22 },
-  colorSelected: { borderWidth: 2, borderColor: colors.textStrong },
   directionCard: {
     flex: 1,
     height: 124,

@@ -13,6 +13,7 @@ import { T } from '@/components/T';
 import { useGoal } from '@/db/store';
 import { completionDays, completionSummary } from '@/lib/completion';
 import { bestStreakDays } from '@/lib/progress';
+import { useStrings } from '@/i18n';
 import { colors, gradients } from '@/theme/tokens';
 
 const SPARKLE = 'M12 2c.6 4.4 1.6 5.4 6 6-4.4.6-5.4 1.6-6 6-.6-4.4-1.6-5.4-6-6 4.4-.6 5.4-1.6 6-6z';
@@ -32,13 +33,14 @@ export default function GoalCompletedScreen() {
   const goal = useGoal(id);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const s = useStrings();
 
   if (!goal) return null;
 
   const now = new Date();
   const summary = completionSummary(goal, now);
   const days = completionDays(goal, now);
-  const share = () => Share.share({ message: `¡Cumplí mi meta "${goal.name}" con Orbe! ${summary}` });
+  const share = () => Share.share({ message: s.completed.share(goal.name, summary) });
 
   return (
     <View style={styles.screen}>
@@ -62,7 +64,7 @@ export default function GoalCompletedScreen() {
 
           <View style={styles.text}>
             <T size={34} weight={600} tracking={-0.02} color={colors.textStrong}>
-              ¡Meta cumplida!
+              {s.completed.title}
             </T>
             <T size={16} color={colors.textSecondary} style={styles.summary}>
               {summary}
@@ -70,23 +72,23 @@ export default function GoalCompletedScreen() {
           </View>
 
           <GlassCard style={styles.stats}>
-            <Stat value={days} label={days === 1 ? 'día' : 'días'} color={colors.lilac} divider />
-            <Stat value={goal.entries.length} label="registros" color={colors.cyan} divider />
-            <Stat value={bestStreakDays(goal.entries, goal.frequency)} label="mejor racha" color={colors.pink} />
+            <Stat value={days} label={s.completed.days(days)} color={colors.lilac} divider />
+            <Stat value={goal.entries.length} label={s.completed.entries} color={colors.cyan} divider />
+            <Stat value={bestStreakDays(goal.entries, goal.frequency)} label={s.completed.bestStreak} color={colors.pink} />
           </GlassCard>
         </View>
 
         <View style={styles.actions}>
-          <Button title="Crear siguiente meta" onPress={() => router.replace('/goal/new')} style={styles.action} />
+          <Button title={s.completed.next} onPress={() => router.replace('/goal/new')} style={styles.action} />
           <Pressable accessibilityRole="button" onPress={share} style={[styles.action, styles.secondary]}>
             <Icon name="share" size={18} color={colors.text} />
             <T size={16} weight={500}>
-              Compartir logro
+              {s.completed.shareButton}
             </T>
           </Pressable>
           <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.back()} style={styles.link}>
             <T size={14} color={colors.lilac}>
-              Ver historial
+              {s.completed.history}
             </T>
           </Pressable>
         </View>

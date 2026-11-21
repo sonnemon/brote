@@ -64,6 +64,7 @@ describe('edición', () => {
     direction: 'down',
     unit: 'kg',
     color: '#C9B6FF',
+    icon: 'dumbbell',
     startText: '85',
     targetText: '72',
     currentText: '78.4',
@@ -81,6 +82,9 @@ describe('edición', () => {
   it('solo crea registro si cambió el valor actual', () => {
     expect(editToUpdate(draft, 78.4).new_current).toBeNull();
     expect(editToUpdate({ ...draft, currentText: '77' }, 78.4).new_current).toBe(77);
+  });
+  it('guarda el icono elegido aunque cambie la unidad', () => {
+    expect(editToUpdate({ ...draft, unit: 'km', icon: 'bike' }, 78.4).icon).toBe('bike');
   });
   it('rota la frecuencia', () => {
     expect(nextFrequency('daily')).toBe('weekly');

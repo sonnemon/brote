@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import type { IconName, NewGoalInput } from '@/lib/goalDraft';
+import type { NewGoalInput } from '@/lib/goalDraft';
 import type { GoalUpdate } from '@/lib/goalEdit';
 import { computeProgress, currentValue, isCompleted, type Direction, type Frequency } from '@/lib/progress';
 
@@ -12,7 +12,7 @@ export type Goal = {
   direction: Direction;
   unit: string;
   color: string;
-  icon: IconName;
+  icon: string;
   start_value: number;
   target_value: number;
   deadline: string | null;

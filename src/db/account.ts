@@ -6,12 +6,22 @@ import {
   createDevPurchases,
   createUnavailablePurchases,
   isPlusActive,
+  isTrialActive,
   latestPlusUntil,
+  trialDaysLeft,
+  trialEndsAt,
   type PlanId,
   type PurchasesProvider,
 } from '@/lib/purchases';
 
 import { deleteKv, getKv, setKv } from './repo';
+import {
+  createRevenueCatPurchases,
+  identifyRevenueCat,
+  initRevenueCat,
+  isRevenueCatEnabled,
+  refreshRevenueCat,
+} from './revenuecat';
 import { reloadGoals, setAfterWrite } from './store';
 import { supabase } from './supabase';
 import { performSync } from './sync';
@@ -19,34 +29,81 @@ import { performSync } from './sync';
 const DEV_PLUS_KEY = 'dev_plus_until';
 const SERVER_PLUS_KEY = 'server_plus_until';
 const LAST_SYNC_KEY = 'last_sync_at';
+const TRIAL_KEY = 'trial_started_at';
+/** Último entitlement conocido de RevenueCat, para arrancar sin red. */
+const STORE_PLUS_KEY = 'store_plus_until';
 const WRITE_DEBOUNCE_MS = 1500;
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
 
 export type Account = {
+  /** Pro activo: comprado o dentro de la prueba gratis. */
   isPlus: boolean;
+  /** Compró Pro (de por vida o desde el servidor). */
+  purchased: boolean;
+  /** Días de prueba que quedan; 0 si terminó. Sin uso si ya compró. */
+  trialDaysLeft: number;
+  /** Hasta cuándo dura Pro (fin de prueba o de la compra); null si ya venció. Lo usan los widgets. */
+  proUntil: string | null;
   email: string | null;
   cloudConfigured: boolean;
   syncStatus: SyncStatus;
   lastSyncAt: string | null;
 };
 
-/** El stub solo existe en desarrollo: un build de producción nunca concede Plus gratis. */
-const purchases: PurchasesProvider = __DEV__
-  ? createDevPurchases({ get: () => getKv(DEV_PLUS_KEY), set: (value) => setKv(DEV_PLUS_KEY, value) })
-  : createUnavailablePurchases();
+/**
+ * RevenueCat si hay clave configurada. Sin clave, el stub de desarrollo (que nunca existe en
+ * producción) o, en un build de producción, ninguna compra posible.
+ */
+const purchases: PurchasesProvider = isRevenueCatEnabled
+  ? createRevenueCatPurchases()
+  : __DEV__
+    ? createDevPurchases({ get: () => getKv(DEV_PLUS_KEY), set: (value) => setKv(DEV_PLUS_KEY, value) })
+    : createUnavailablePurchases();
 
 let session: Session | null = null;
 let syncStatus: SyncStatus = 'idle';
 
+/** La prueba empieza la primera vez que se abre la app (o la primera vez tras esta versión). */
+function trialStartedAt(): string {
+  let started = getKv(TRIAL_KEY);
+  if (!started) {
+    started = new Date().toISOString();
+    setKv(TRIAL_KEY, started);
+  }
+  return started;
+}
+
+/** Pro comprado: tienda (RevenueCat), servidor (plus_until en Supabase) o stub de desarrollo. */
+function purchasedUntil(): string | null {
+  const dev = __DEV__ && !isRevenueCatEnabled ? getKv(DEV_PLUS_KEY) : null;
+  return latestPlusUntil(dev, getKv(SERVER_PLUS_KEY), getKv(STORE_PLUS_KEY));
+}
+
+function setStoreUntil(until: string | null) {
+  if (until === getKv(STORE_PLUS_KEY)) return;
+  if (until) setKv(STORE_PLUS_KEY, until);
+  else deleteKv(STORE_PLUS_KEY);
+  publish();
+  requestSync();
+}
+
 function computePlus(): boolean {
-  const dev = __DEV__ ? getKv(DEV_PLUS_KEY) : null;
-  return isPlusActive(latestPlusUntil(dev, getKv(SERVER_PLUS_KEY)), new Date());
+  const now = new Date();
+  return isPlusActive(purchasedUntil(), now) || isTrialActive(trialStartedAt(), now);
 }
 
 function compute(): Account {
+  const now = new Date();
+  const until = purchasedUntil();
+  const purchased = isPlusActive(until, now);
+  const trialEnd = trialEndsAt(trialStartedAt());
+  const inTrial = trialEnd > now;
   return {
-    isPlus: computePlus(),
+    isPlus: purchased || inTrial,
+    purchased,
+    trialDaysLeft: trialDaysLeft(trialStartedAt(), now),
+    proUntil: purchased ? until : inTrial ? trialEnd.toISOString() : null,
     email: session?.user.email ?? null,
     cloudConfigured: supabase !== null,
     syncStatus,
@@ -74,6 +131,8 @@ export function useAccount(): Account {
 }
 
 export const isPlusNow = () => snapshot.isPlus;
+
+export const getAccount = () => snapshot;
 
 // --- Sincronización -------------------------------------------------------
 
@@ -131,6 +190,9 @@ async function refreshProfile() {
 async function onSessionChanged(next: Session | null) {
   const changedUser = next?.user.id !== session?.user.id;
   session = next;
+  // Las compras siguen a la cuenta: al entrar en otro celular se recupera Pro. Se identifica antes de
+  // avisar, para que la pantalla vea la sesión y el Pro de esa cuenta a la vez.
+  if (changedUser) await identifyRevenueCat(next?.user.id ?? null);
   publish();
   if (next && changedUser) {
     await refreshProfile();
@@ -142,6 +204,7 @@ async function onSessionChanged(next: Session | null) {
 /** Arranca sesión, disparadores de sync y escucha de foreground. Devuelve la limpieza. */
 export function initAccount(): () => void {
   setAfterWrite(() => requestSync(WRITE_DEBOUNCE_MS));
+  const stopRevenueCat = initRevenueCat(setStoreUntil);
 
   // Dentro del callback de auth no se puede llamar a Supabase sin riesgo de bloqueo: se difiere.
   const authSubscription = supabase?.auth.onAuthStateChange((_event, next) => {
@@ -150,9 +213,15 @@ export function initAccount(): () => void {
 
   if (supabase) supabase.auth.startAutoRefresh();
 
+  // Al terminar la prueba con la app abierta, se bloquea Pro en ese momento.
+  const msToTrialEnd = trialEndsAt(trialStartedAt()).getTime() - Date.now();
+  const trialTimer = msToTrialEnd > 0 && msToTrialEnd < 2 ** 31 - 1 ? setTimeout(publish, msToTrialEnd + 1000) : null;
+
   const appState = AppState.addEventListener('change', (state) => {
     if (state === 'active') {
       supabase?.auth.startAutoRefresh();
+      publish(); // Recalcula la prueba aunque no haya red.
+      void refreshRevenueCat();
       void refreshProfile().then(publish);
       requestSync();
     } else {
@@ -162,6 +231,8 @@ export function initAccount(): () => void {
 
   return () => {
     setAfterWrite(null);
+    stopRevenueCat();
+    if (trialTimer) clearTimeout(trialTimer);
     authSubscription?.data.subscription.unsubscribe();
     appState.remove();
   };
@@ -185,6 +256,13 @@ export async function restorePurchases(): Promise<boolean> {
 export function clearDevPlus() {
   if (!__DEV__) return;
   deleteKv(DEV_PLUS_KEY);
+  publish();
+}
+
+/** Solo desarrollo: da la prueba por terminada (o la reinicia) para probar el bloqueo. */
+export function setDevTrialEnded(ended: boolean) {
+  if (!__DEV__) return;
+  setKv(TRIAL_KEY, new Date(Date.now() - (ended ? 8 : 0) * 86_400_000).toISOString());
   publish();
 }
 

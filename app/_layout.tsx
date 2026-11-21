@@ -1,3 +1,4 @@
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { Sora_400Regular, Sora_500Medium, Sora_600SemiBold, Sora_700Bold, useFonts } from '@expo-google-fonts/sora';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -5,14 +6,24 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { initAccount } from '@/db/account';
+import { initLanguage } from '@/db/language';
 import { initReminders } from '@/db/reminders';
 import { initWidgets } from '@/db/widgets';
 import { colors } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
+// Antes del primer render, para que ninguna pantalla aparezca en el idioma equivocado.
+initLanguage();
+
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ Sora_400Regular, Sora_500Medium, Sora_600SemiBold, Sora_700Bold });
+  const [loaded, error] = useFonts({
+    Sora_400Regular,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    Fraunces_600SemiBold,
+  });
   const ready = loaded || !!error;
 
   useEffect(() => {

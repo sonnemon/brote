@@ -2,7 +2,7 @@
 module.exports = {
   type: 'widget',
   name: 'OrbeWidget',
-  displayName: 'Orbe',
+  displayName: 'Brote',
   deploymentTarget: '17.0',
   frameworks: ['SwiftUI', 'WidgetKit'],
   entitlements: {
