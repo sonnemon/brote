@@ -1,3 +1,5 @@
+import { strings } from '../i18n';
+
 export type CsvGoal = {
   id: string;
   name: string;
@@ -14,8 +16,6 @@ export type CsvEntry = {
   recorded_at: string;
 };
 
-const HEADER = ['meta', 'tipo', 'unidad', 'inicial', 'objetivo', 'fecha', 'valor', 'nota'];
-
 function cell(value: string | number): string {
   const text = String(value);
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -25,11 +25,12 @@ const row = (values: (string | number)[]) => values.map(cell).join(',');
 
 /** Una fila por registro; las metas sin registros salen con fecha y valor vacíos. */
 export function buildCsv(goals: readonly CsvGoal[], entries: readonly CsvEntry[]): string {
-  const lines = [row(HEADER)];
+  const s = strings();
+  const lines = [row(s.csv.header)];
   for (const goal of goals) {
     const base = [
       goal.name,
-      goal.direction === 'down' ? 'Decreciente' : 'Creciente',
+      goal.direction === 'down' ? s.common.decreasing : s.common.increasing,
       goal.unit,
       goal.start_value,
       goal.target_value,

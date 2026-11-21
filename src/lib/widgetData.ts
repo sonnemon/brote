@@ -1,3 +1,5 @@
+import { strings } from '../i18n';
+
 import { formatDayMonth, formatNumber, formatSigned, formatValue } from './format';
 import { clamp, streakDays, suggestedPace, weeklyChange, weeklySeries, type EntryPoint, type Frequency } from './progress';
 
@@ -65,7 +67,7 @@ export function buildWidgetSnapshot(goal: WidgetGoal, now: Date): WidgetSnapshot
     unit: goal.unit,
     percent: Math.round(goal.progress * 100),
     progress: goal.progress,
-    changeText: delta === 0 ? 'Sin cambios' : `${delta < 0 ? '▾' : '▴'} ${formatValue(Math.abs(delta), goal.unit)}`,
+    changeText: delta === 0 ? strings().widget.noChange : `${delta < 0 ? '▾' : '▴'} ${formatValue(Math.abs(delta), goal.unit)}`,
     targetText: formatValue(goal.target_value, goal.unit),
     targetNumberText: formatNumber(goal.target_value),
     streakDays: streak,

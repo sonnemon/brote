@@ -4,9 +4,15 @@ import {
   createDevPurchases,
   createUnavailablePurchases,
   isPlusActive,
+  isTrialActive,
   isValidEmail,
   latestPlusUntil,
+  lifetimePrice,
+  LIFETIME_UNTIL,
   PurchasesUnavailableError,
+  trialDaysLeft,
+  trialEndsAt,
+  untilFromEntitlement,
 } from './purchases';
 import { normalizeRemoteRow, runSync, shouldApplyRemote, type SyncPorts, type SyncRow, type SyncTable } from './sync';
 
@@ -143,15 +149,35 @@ describe('runSync', () => {
 describe('purchases', () => {
   const now = () => new Date('2026-11-08T12:00:00Z');
 
-  it('el stub concede el periodo del plan y lo restaura', async () => {
+  it('el stub concede Pro de por vida y lo restaura', async () => {
     let saved: string | null = null;
-    const p = createDevPurchases({ get: () => saved, set: (v) => (saved = v) }, now);
+    const p = createDevPurchases({ get: () => saved, set: (v) => (saved = v) });
     expect(await p.restore()).toBeNull();
-    expect(await p.purchase('monthly')).toBe('2026-12-08T12:00:00.000Z');
-    expect(await p.restore()).toBe('2026-12-08T12:00:00.000Z');
+    expect(await p.purchase('lifetime')).toBe(LIFETIME_UNTIL);
+    expect(await p.restore()).toBe(LIFETIME_UNTIL);
+    expect(isPlusActive(LIFETIME_UNTIL, new Date('2090-01-01'))).toBe(true);
   });
-  it('producción sin RevenueCat no concede Plus', async () => {
-    await expect(createUnavailablePurchases().purchase('annual')).rejects.toBeInstanceOf(PurchasesUnavailableError);
+  it('producción sin RevenueCat no concede Pro', async () => {
+    await expect(createUnavailablePurchases().purchase('lifetime')).rejects.toBeInstanceOf(PurchasesUnavailableError);
+  });
+  it('la prueba dura 7 días desde el primer uso', () => {
+    const start = '2026-11-08T12:00:00.000Z';
+    expect(trialEndsAt(start).toISOString()).toBe('2026-11-15T12:00:00.000Z');
+    expect(isTrialActive(start, new Date('2026-11-15T11:59:00Z'))).toBe(true);
+    expect(isTrialActive(start, new Date('2026-11-15T12:00:00Z'))).toBe(false);
+    expect(trialDaysLeft(start, now())).toBe(7);
+    expect(trialDaysLeft(start, new Date('2026-11-15T10:00:00Z'))).toBe(1);
+    expect(trialDaysLeft(start, new Date('2026-11-20T00:00:00Z'))).toBe(0);
+  });
+  it('lee el entitlement de RevenueCat', () => {
+    expect(untilFromEntitlement(undefined)).toBeNull();
+    expect(untilFromEntitlement({ expirationDate: null })).toBe(LIFETIME_UNTIL);
+    expect(untilFromEntitlement({ expirationDate: '2027-01-01T00:00:00Z' })).toBe('2027-01-01T00:00:00Z');
+  });
+  it('precio en soles para Perú y en dólares para el resto', () => {
+    expect(lifetimePrice('PEN')).toBe('S/ 49.90');
+    expect(lifetimePrice('USD')).toBe('US$12.99');
+    expect(lifetimePrice(null)).toBe('US$12.99');
   });
   it('Plus depende de la fecha de vencimiento', () => {
     expect(isPlusActive(null, now())).toBe(false);

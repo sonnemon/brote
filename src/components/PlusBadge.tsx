@@ -16,7 +16,7 @@ export function PlusBadge() {
     >
       <Icon name="lock" size={10} color={colors.textStrong} strokeWidth={3} />
       <T size={10} weight={700} tracking={0.08} color={colors.textStrong}>
-        PLUS
+        PRO
       </T>
     </LinearGradient>
   );

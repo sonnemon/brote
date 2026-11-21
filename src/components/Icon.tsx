@@ -1,9 +1,13 @@
-import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
-
-import type { IconName } from '@/lib/goalDraft';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 export type UiIconName =
-  | IconName
+  | 'scale'
+  | 'wallet'
+  | 'book'
+  | 'route'
+  | 'clock'
+  | 'percent'
+  | 'star'
   | 'back'
   | 'close'
   | 'plus'
@@ -14,7 +18,7 @@ export type UiIconName =
   | 'bell'
   | 'lock'
   | 'user'
-  | 'orbit'
+  | 'sprout'
   | 'gear'
   | 'trendUp'
   | 'trendDown'
@@ -27,9 +31,7 @@ export type UiIconName =
   | 'cloud'
   | 'coin'
   | 'moon'
-  | 'arrows'
-  | 'flag'
-  | 'phone';
+  | 'globe';
 
 type Props = { name: UiIconName; size?: number; color: string; strokeWidth?: number };
 
@@ -44,6 +46,13 @@ export function Icon({ name, size = 22, color, strokeWidth = 2 }: Props) {
 
 function renderIcon(name: UiIconName, s: Record<string, string | number>) {
   switch (name) {
+    case 'globe':
+      return (
+        <>
+          <Circle cx="12" cy="12" r="9.5" {...s} />
+          <Path d="M12 2.5a14 14 0 0 0 0 19 14 14 0 0 0 0-19M2.5 12h19" {...s} />
+        </>
+      );
     case 'more':
       return (
         <>
@@ -83,17 +92,6 @@ function renderIcon(name: UiIconName, s: Record<string, string | number>) {
       );
     case 'moon':
       return <Path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" {...s} />;
-    case 'arrows':
-      return <Path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4" {...s} />;
-    case 'flag':
-      return <Path d="M5 21V4M5 4h11l-2 4 2 4H5" {...s} />;
-    case 'phone':
-      return (
-        <>
-          <Rect x={7} y={2} width={10} height={20} rx={2.5} {...s} />
-          <Path d="M11 18h2" {...s} />
-        </>
-      );
     case 'back':
       return <Path d="M15 6l-6 6 6 6" {...s} />;
     case 'close':
@@ -131,11 +129,12 @@ function renderIcon(name: UiIconName, s: Record<string, string | number>) {
       );
     case 'star':
       return <Path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6L12 16.8 6.7 19.6l1.1-6L3.4 9.4l6-.8z" {...s} />;
-    case 'orbit':
+    case 'sprout':
       return (
         <>
-          <Circle cx={12} cy={12} r={5} {...s} />
-          <Ellipse cx={12} cy={12} rx={10} ry={3.5} rotation={-20} originX={12} originY={12} {...s} />
+          <Path d="M12 20v-8M7 20h10" {...s} />
+          <Path d="M12 14c-4.2 0-7-2.6-7-6.5 4.2 0 7 2.6 7 6.5z" {...s} />
+          <Path d="M12 11c0-3.8 2.6-6.5 6.5-6.5 0 3.8-2.6 6.5-6.5 6.5z" {...s} />
         </>
       );
     case 'gear':

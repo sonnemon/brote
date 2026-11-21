@@ -6,6 +6,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useStrings } from '@/i18n';
 import { colors, gradients } from '@/theme/tokens';
 
 import { Icon, type UiIconName } from './Icon';
@@ -15,13 +16,14 @@ type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>
 
 export const TAB_BAR_SPACE = 110;
 
-const ITEMS: Record<string, { label: string; icon: UiIconName }> = {
-  index: { label: 'Inicio', icon: 'orbit' },
-  settings: { label: 'Ajustes', icon: 'gear' },
+const ITEMS: Record<string, { label: 'home' | 'settings'; icon: UiIconName }> = {
+  index: { label: 'home', icon: 'sprout' },
+  settings: { label: 'settings', icon: 'gear' },
 };
 
 export function OrbeTabBar({ state, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const s = useStrings();
   const activeName = state.routes[state.index].name;
 
   const tab = (name: string) => {
@@ -43,7 +45,7 @@ export function OrbeTabBar({ state, navigateToTab }: TabBarProps) {
         )}
         <Icon name={item.icon} color={active ? colors.lilac : colors.textSecondary} />
         <T size={11} weight={active ? 600 : 400} color={active ? colors.textStrong : colors.textSecondary}>
-          {item.label}
+          {s.tabs[item.label]}
         </T>
       </Pressable>
     );
@@ -55,7 +57,7 @@ export function OrbeTabBar({ state, navigateToTab }: TabBarProps) {
         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, styles.tint]} />
         {tab('index')}
-        <Pressable accessibilityRole="button" accessibilityLabel="Nueva meta" onPress={() => router.push('/goal/new')}>
+        <Pressable accessibilityRole="button" accessibilityLabel={s.tabs.newGoal} onPress={() => router.push('/goal/new')}>
           <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.add}>
             <Icon name="plus" size={24} color={colors.onPrimary} strokeWidth={2.4} />
           </LinearGradient>

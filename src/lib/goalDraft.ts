@@ -1,14 +1,18 @@
-import { CURRENCY_UNIT, parseDecimal } from './format';
+import { strings } from '../i18n';
+
+import { parseDecimal } from './format';
 import { isValidRange, presetValue, type Direction, type Frequency } from './progress';
 import type { ReminderConfig } from './reminders';
-
-export type IconName = 'scale' | 'wallet' | 'book' | 'route' | 'clock' | 'percent' | 'star';
 
 export type GoalDraft = {
   name: string;
   direction: Direction;
   unit: string;
   color: string;
+  /** Clave del icono (ver goalIcons). */
+  icon: string;
+  /** true mientras el icono siga la sugerencia del nombre; false cuando el usuario lo eligió. */
+  iconAuto: boolean;
   startText: string;
   targetText: string;
   hasProgress: boolean;
@@ -26,7 +30,7 @@ export type NewGoalInput = {
   direction: Direction;
   unit: string;
   color: string;
-  icon: IconName;
+  icon: string;
   start_value: number;
   target_value: number;
   deadline: string | null;
@@ -36,19 +40,9 @@ export type NewGoalInput = {
   initial_value: number | null;
 };
 
-export function iconForUnit(unit: string): IconName {
-  if (unit === 'kg') return 'scale';
-  if (unit === CURRENCY_UNIT) return 'wallet';
-  if (unit === 'páginas' || unit === 'libros') return 'book';
-  if (unit === 'km') return 'route';
-  if (unit === 'horas') return 'clock';
-  if (unit === '%') return 'percent';
-  return 'star';
-}
-
 export function validateWhat(draft: GoalDraft): string | null {
-  if (draft.name.trim() === '') return 'Ponle un nombre a tu meta.';
-  if (draft.unit.trim() === '') return 'Elige una unidad.';
+  if (draft.name.trim() === '') return strings().validation.name;
+  if (draft.unit.trim() === '') return strings().validation.unit;
   return null;
 }
 
@@ -65,16 +59,16 @@ export function draftCurrent(draft: GoalDraft): number {
 export function validateFrom(draft: GoalDraft): string | null {
   const start = parseDecimal(draft.startText);
   const target = parseDecimal(draft.targetText);
-  if (!Number.isFinite(start) || !Number.isFinite(target)) return 'Completa el valor inicial y el objetivo.';
+  if (!Number.isFinite(start) || !Number.isFinite(target)) return strings().validation.values;
   if (!isValidRange(draft.direction, start, target)) {
     return draft.direction === 'down'
-      ? 'En una meta decreciente, el objetivo debe ser menor que el valor inicial.'
-      : 'En una meta creciente, el objetivo debe ser mayor que el valor inicial.';
+      ? strings().validation.downRange
+      : strings().validation.upRange;
   }
   const current = draftCurrent(draft);
-  if (!Number.isFinite(current)) return 'Indica tu valor actual.';
+  if (!Number.isFinite(current)) return strings().validation.current;
   if (current < Math.min(start, target) || current > Math.max(start, target)) {
-    return 'Tu valor actual debe estar entre el inicial y el objetivo.';
+    return strings().validation.currentRange;
   }
   return null;
 }
@@ -88,7 +82,7 @@ export function draftToInput(draft: GoalDraft): NewGoalInput {
     direction: draft.direction,
     unit,
     color: draft.color,
-    icon: iconForUnit(unit),
+    icon: draft.icon,
     start_value: start,
     target_value: parseDecimal(draft.targetText),
     deadline: draft.hasDeadline ? draft.deadline.toISOString() : null,

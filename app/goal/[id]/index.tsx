@@ -21,6 +21,7 @@ import {
   formatValue,
 } from '@/lib/format';
 import { isCompleted, streakDays, weeklyChange, weeklySeries } from '@/lib/progress';
+import { useStrings } from '@/i18n';
 import { colors } from '@/theme/tokens';
 
 const HISTORY_PREVIEW = 3;
@@ -29,6 +30,7 @@ export default function GoalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goal = useGoal(id);
   const insets = useSafeAreaInsets();
+  const s = useStrings();
 
   useFocusEffect(
     useCallback(() => {
@@ -40,8 +42,8 @@ export default function GoalDetailScreen() {
     return (
       <View style={[styles.screen, styles.missing]}>
         <NebulaBackground variant={2} />
-        <T size={16}>Esta meta ya no existe.</T>
-        <Button title="Volver" onPress={() => router.back()} style={styles.missingButton} />
+        <T size={16}>{s.detail.missing}</T>
+        <Button title={s.detail.back} onPress={() => router.back()} style={styles.missingButton} />
       </View>
     );
   }
@@ -60,7 +62,7 @@ export default function GoalDetailScreen() {
         <History goal={goal} />
       </ScrollView>
       <Button
-        title="Registrar avance"
+        title={s.detail.log}
         icon="plus"
         onPress={() => router.push(`/goal/${goal.id}/log`)}
         style={[styles.cta, { bottom: Math.max(insets.bottom, 16) }]}
@@ -70,11 +72,12 @@ export default function GoalDetailScreen() {
 }
 
 function Header({ goal }: { goal: GoalView }) {
-  const direction = goal.direction === 'down' ? '▼ Decreciente' : '▲ Creciente';
-  const deadline = goal.deadline ? `hasta ${formatDayMonth(new Date(goal.deadline))}` : 'sin fecha';
+  const s = useStrings();
+  const direction = goal.direction === 'down' ? s.common.decreasingArrow : s.common.increasingArrow;
+  const deadline = goal.deadline ? s.detail.until(formatDayMonth(new Date(goal.deadline))) : s.common.noDeadline;
   return (
     <View style={styles.nav}>
-      <RoundButton icon="back" label="Atrás" onPress={() => router.back()} />
+      <RoundButton icon="back" label={s.common.back} onPress={() => router.back()} />
       <View style={styles.navTitle}>
         <T size={16} weight={600} numberOfLines={1}>
           {goal.name}
@@ -83,12 +86,13 @@ function Header({ goal }: { goal: GoalView }) {
           {direction} · {deadline}
         </T>
       </View>
-      <RoundButton icon="more" label="Editar meta" onPress={() => router.push(`/goal/${goal.id}/edit`)} />
+      <RoundButton icon="more" label={s.detail.edit} onPress={() => router.push(`/goal/${goal.id}/edit`)} />
     </View>
   );
 }
 
 function Hero({ goal }: { goal: GoalView }) {
+  const s = useStrings();
   const remaining = Math.abs(goal.target_value - goal.current);
   return (
     <View style={styles.hero}>
@@ -103,8 +107,8 @@ function Hero({ goal }: { goal: GoalView }) {
         </View>
         <T size={13} color={colors.lilacSoft}>
           {isCompleted(goal.progress)
-            ? '¡Meta cumplida!'
-            : `${formatPercent(goal.progress)} · faltan ${formatValue(remaining, goal.unit)}`}
+            ? s.detail.completed
+            : `${formatPercent(goal.progress)} · ${s.detail.remaining(formatValue(remaining, goal.unit))}`}
         </T>
       </Ring>
     </View>
@@ -112,12 +116,13 @@ function Hero({ goal }: { goal: GoalView }) {
 }
 
 function Stats({ goal }: { goal: GoalView }) {
+  const s = useStrings();
   const streak = streakDays(goal.entries, goal.frequency, new Date());
   return (
     <View style={styles.stats}>
-      <Stat label="Inicio" value={formatValue(goal.start_value, goal.unit)} />
-      <Stat label="Meta" value={formatValue(goal.target_value, goal.unit)} />
-      <Stat label="Racha" value={`${streak} ${streak === 1 ? 'día' : 'días'}`} accent />
+      <Stat label={s.common.start} value={formatValue(goal.start_value, goal.unit)} />
+      <Stat label={s.common.goal} value={formatValue(goal.target_value, goal.unit)} />
+      <Stat label={s.common.streak} value={s.common.days(streak)} accent />
     </View>
   );
 }
@@ -136,15 +141,16 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 }
 
 function Chart({ goal }: { goal: GoalView }) {
+  const s = useStrings();
   const series = weeklySeries(goal.start_value, goal.entries, new Date());
   return (
     <GlassCard style={styles.chart}>
       <View style={styles.spaceBetween}>
         <T size={15} weight={600}>
-          Últimas 8 semanas
+          {s.detail.last8}
         </T>
         <T size={12} color={colors.cyan}>
-          {formatSignedValue(weeklyChange(series), goal.unit)} / sem
+          {formatSignedValue(weeklyChange(series), goal.unit)} {s.detail.perWeek}
         </T>
       </View>
       <WeeklyChart values={series.map((point) => point.value)} />
@@ -153,7 +159,7 @@ function Chart({ goal }: { goal: GoalView }) {
           {formatDayMonth(series[0].date)}
         </T>
         <T size={11} color={colors.textTertiary}>
-          Hoy
+          {s.common.today}
         </T>
       </View>
     </GlassCard>
@@ -161,6 +167,7 @@ function Chart({ goal }: { goal: GoalView }) {
 }
 
 function History({ goal }: { goal: GoalView }) {
+  const s = useStrings();
   const [expanded, setExpanded] = useState(false);
   const now = new Date();
   const visible = expanded ? goal.entries : goal.entries.slice(0, HISTORY_PREVIEW);
@@ -169,12 +176,12 @@ function History({ goal }: { goal: GoalView }) {
     <View style={styles.history}>
       <View style={styles.spaceBetween}>
         <T size={15} weight={600}>
-          Historial
+          {s.detail.history}
         </T>
         {goal.entries.length > HISTORY_PREVIEW && (
           <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setExpanded(!expanded)}>
             <T size={13} color={colors.lilac}>
-              {expanded ? 'Ver menos' : 'Ver todo'}
+              {expanded ? s.detail.seeLess : s.detail.seeAll}
             </T>
           </Pressable>
         )}
@@ -182,7 +189,7 @@ function History({ goal }: { goal: GoalView }) {
       <View style={styles.historyCard}>
         {goal.entries.length === 0 && (
           <T size={14} color={colors.textSecondary} style={styles.historyEmpty}>
-            Registra tu primer avance para empezar tu historial.
+            {s.detail.historyEmpty}
           </T>
         )}
         {visible.map((entry, i) => {

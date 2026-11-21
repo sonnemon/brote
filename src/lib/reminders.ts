@@ -1,3 +1,5 @@
+import { strings } from '../i18n';
+
 import { formatCurrentOfTarget } from './format';
 import type { Frequency } from './progress';
 
@@ -16,15 +18,12 @@ export const DEFAULT_REMINDER_TIME: TimeOfDay = { hour: 7, minute: 0 };
 export const MAX_SCHEDULED = 64;
 
 /** La semana empieza en lunes, como en el calendario peruano. */
-export const WEEKDAY_OPTIONS = [
-  { value: 1, label: 'L', name: 'Lunes' },
-  { value: 2, label: 'M', name: 'Martes' },
-  { value: 3, label: 'X', name: 'Miércoles' },
-  { value: 4, label: 'J', name: 'Jueves' },
-  { value: 5, label: 'V', name: 'Viernes' },
-  { value: 6, label: 'S', name: 'Sábado' },
-  { value: 0, label: 'D', name: 'Domingo' },
-] as const;
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+export function weekdayOptions(): { value: number; label: string; name: string }[] {
+  const s = strings();
+  return WEEK_ORDER.map((value) => ({ value, label: s.weekdayLetters[value], name: s.weekdays[value] }));
+}
 
 export function defaultReminder(frequency: Frequency, now: Date, time: TimeOfDay): ReminderConfig {
   return { weekday: frequency === 'daily' ? null : now.getDay(), ...time };
@@ -75,7 +74,7 @@ export type PlannedReminder = {
 export function reminderContent(goal: ReminderGoal): { title: string; body: string } {
   return {
     title: goal.name,
-    body: `Registra tu avance. Vas en ${formatCurrentOfTarget(goal.current, goal.target_value, goal.unit)}.`,
+    body: strings().reminders.body(formatCurrentOfTarget(goal.current, goal.target_value, goal.unit)),
   };
 }
 

@@ -7,6 +7,8 @@ const base: GoalDraft = {
   direction: 'down',
   unit: 'kg',
   color: '#C9B6FF',
+  icon: 'dumbbell',
+  iconAuto: true,
   startText: '85',
   targetText: '72',
   hasProgress: false,
@@ -51,8 +53,7 @@ describe('avance previo', () => {
   it('sin fecha límite guarda null', () => {
     expect(draftToInput(base).deadline).toBeNull();
   });
-  it('asigna ícono por unidad', () => {
-    expect(draftToInput(base).icon).toBe('scale');
-    expect(draftToInput({ ...base, unit: 'pasos' }).icon).toBe('star');
+  it('guarda el ícono elegido', () => {
+    expect(draftToInput({ ...base, icon: 'dumbbell', iconAuto: false }).icon).toBe('dumbbell');
   });
 });

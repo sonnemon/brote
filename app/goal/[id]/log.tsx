@@ -10,16 +10,12 @@ import { Field, ProgressBar, Segmented } from '@/components/ui';
 import { logEntry, useGoal, type GoalView } from '@/db/store';
 import { formatPercent, formatSignedValue, heroInputFontSize, nudgeText, parseDecimal, stepForUnit } from '@/lib/format';
 import { computeProgress, round2 } from '@/lib/progress';
+import { useStrings } from '@/i18n';
 import { colors, fonts } from '@/theme/tokens';
 
 type Mode = 'value' | 'delta';
 
 const INPUT_WIDTH_SLACK = 8;
-
-const MODES: { value: Mode; label: string }[] = [
-  { value: 'value', label: 'Valor nuevo' },
-  { value: 'delta', label: 'Cambio ±' },
-];
 
 export default function LogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +24,11 @@ export default function LogScreen() {
 }
 
 function LogForm({ goal }: { goal: GoalView }) {
+  const s = useStrings();
+  const modes: { value: Mode; label: string }[] = [
+    { value: 'value', label: s.log.newValue },
+    { value: 'delta', label: s.log.change },
+  ];
   const [mode, setMode] = useState<Mode>('value');
   const [text, setText] = useState(String(goal.current));
   const [date, setDate] = useState(() => new Date());
@@ -61,19 +62,19 @@ function LogForm({ goal }: { goal: GoalView }) {
       <View style={styles.nav}>
         <Pressable accessibilityRole="button" hitSlop={12} onPress={() => router.back()} style={styles.navSide}>
           <T size={15} color={colors.textSecondary}>
-            Cancelar
+            {s.common.cancel}
           </T>
         </Pressable>
         <T size={17} weight={600}>
-          Registrar avance
+          {s.log.title}
         </T>
         <View style={styles.navSide} />
       </View>
 
-      <Segmented options={MODES} value={mode} onChange={changeMode} />
+      <Segmented options={modes} value={mode} onChange={changeMode} />
 
       <View style={styles.stepper}>
-        <StepButton icon="minus" label={`Restar ${step}`} onPress={() => nudge(-1)} />
+        <StepButton icon="minus" label={s.log.subtract(step)} onPress={() => nudge(-1)} />
         <View style={styles.valueWrap}>
           {/* iOS calcula de menos el ancho propio del TextInput y corta el último dígito. */}
           <Text
@@ -86,7 +87,7 @@ function LogForm({ goal }: { goal: GoalView }) {
             {text || '0'}
           </Text>
           <TextInput
-            accessibilityLabel={mode === 'value' ? 'Valor nuevo' : 'Cambio'}
+            accessibilityLabel={mode === 'value' ? s.log.newValue : s.log.changeLabel}
             value={text}
             onChangeText={setText}
             keyboardType={mode === 'value' ? 'decimal-pad' : 'numbers-and-punctuation'}
@@ -99,14 +100,14 @@ function LogForm({ goal }: { goal: GoalView }) {
             {goal.unit}
           </T>
         </View>
-        <StepButton icon="plus" label={`Sumar ${step}`} onPress={() => nudge(1)} />
+        <StepButton icon="plus" label={s.log.add(step)} onPress={() => nudge(1)} />
       </View>
 
       <View style={styles.impact}>
         {valid && (
           <View style={styles.diff}>
             <T size={13} color="#B5EEF6">
-              {formatSignedValue(value - goal.current, goal.unit)} vs. último registro
+              {formatSignedValue(value - goal.current, goal.unit)} {s.log.vsLast}
             </T>
           </View>
         )}
@@ -125,7 +126,7 @@ function LogForm({ goal }: { goal: GoalView }) {
         <View style={[styles.row, styles.separator]}>
           <View style={styles.rowLabel}>
             <Icon name="calendar" size={18} color={colors.lilac} />
-            <T size={15}>Fecha</T>
+            <T size={15}>{s.log.date}</T>
           </View>
           <DateTimePicker
             value={date}
@@ -133,7 +134,7 @@ function LogForm({ goal }: { goal: GoalView }) {
             display="compact"
             themeVariant="dark"
             accentColor={colors.lilac}
-            locale="es-PE"
+            locale={s.locale}
             maximumDate={new Date()}
             onValueChange={(_, next) => setDate(next)}
           />
@@ -141,14 +142,14 @@ function LogForm({ goal }: { goal: GoalView }) {
         <Field
           value={note}
           onChangeText={setNote}
-          placeholder="Agrega una nota (opcional)"
-          accessibilityLabel="Nota"
+          placeholder={s.log.notePlaceholder}
+          accessibilityLabel={s.log.note}
           maxLength={140}
           style={styles.note}
         />
       </View>
 
-      <Button title="Guardar" onPress={save} disabled={!valid} />
+      <Button title={s.common.save} onPress={save} disabled={!valid} />
     </ScrollView>
   );
 }

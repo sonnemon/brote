@@ -4,19 +4,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { GlassCard } from '@/components/GlassCard';
+import { GoalIcon } from '@/components/GoalIcon';
 import { Icon } from '@/components/Icon';
 import { NebulaBackground } from '@/components/NebulaBackground';
 import { TAB_BAR_SPACE } from '@/components/OrbeTabBar';
 import { Ring } from '@/components/Ring';
 import { T } from '@/components/T';
 import { useGoals, type GoalView } from '@/db/store';
+import { useStrings } from '@/i18n';
 import { formatCurrentOfTarget, formatDayMonth, formatPercent, greeting } from '@/lib/format';
-import type { IconName } from '@/lib/goalDraft';
 import { isCompleted, streakDays } from '@/lib/progress';
 import { alpha, colors } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const s = useStrings();
   const goals = useGoals();
   const now = new Date();
   const active = goals.filter((goal) => !isCompleted(goal.progress)).length;
@@ -39,12 +41,12 @@ export default function HomeScreen() {
                   {greeting(now)}
                 </T>
                 <T size={30} weight={600} tracking={-0.02} color={colors.textStrong}>
-                  Tus metas
+                  {s.home.title}
                 </T>
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Ajustes"
+                accessibilityLabel={s.home.settings}
                 onPress={() => router.navigate('/settings')}
                 style={styles.profile}
               >
@@ -53,12 +55,12 @@ export default function HomeScreen() {
             </View>
             {goals.length > 0 && (
               <View style={styles.pills}>
-                <StatPill color={colors.lilac} textColor={colors.lilacSoft} label={`${active} ${active === 1 ? 'activa' : 'activas'}`} />
+                <StatPill color={colors.lilac} textColor={colors.lilacSoft} label={s.home.active(active)} />
                 {streak > 0 && (
                   <StatPill
                     color={colors.pink}
                     textColor="#FFC2E0"
-                    label={`${streak} ${streak === 1 ? 'día' : 'días'} de racha`}
+                    label={s.home.streak(streak)}
                     icon
                   />
                 )}
@@ -84,8 +86,9 @@ function StatPill({ color, textColor, label, icon }: { color: string; textColor:
 }
 
 function GoalCard({ goal }: { goal: GoalView }) {
+  const s = useStrings();
   const down = goal.direction === 'down';
-  const deadline = goal.deadline ? formatDayMonth(new Date(goal.deadline)) : 'sin fecha';
+  const deadline = goal.deadline ? formatDayMonth(new Date(goal.deadline)) : s.common.noDeadline;
 
   return (
     <Pressable
@@ -97,14 +100,14 @@ function GoalCard({ goal }: { goal: GoalView }) {
       <GlassCard style={styles.card}>
         <View style={styles.cardRow}>
           <View style={[styles.goalIcon, { backgroundColor: alpha(goal.color, 0.14), borderColor: alpha(goal.color, 0.3) }]}>
-            <Icon name={goal.icon as IconName} color={goal.color} />
+            <GoalIcon name={goal.icon} color={goal.color} />
           </View>
           <View style={styles.cardText}>
             <T size={16} weight={600} numberOfLines={1}>
               {goal.name}
             </T>
             <T size={11} color={goal.color}>
-              {down ? '▼ Decreciente' : '▲ Creciente'} · {deadline}
+              {down ? s.common.decreasingArrow : s.common.increasingArrow} · {deadline}
             </T>
             <T size={13} color={colors.textSecondary} numberOfLines={1}>
               {formatCurrentOfTarget(goal.current, goal.target_value, goal.unit)}
@@ -122,18 +125,19 @@ function GoalCard({ goal }: { goal: GoalView }) {
 }
 
 function EmptyState() {
+  const s = useStrings();
   return (
     <GlassCard style={styles.empty} radius={28}>
       <Ring progress={0} size={96} strokeWidth={8}>
-        <Icon name="orbit" size={34} color={colors.lilac} />
+        <Icon name="sprout" size={34} color={colors.lilac} />
       </Ring>
       <T size={20} weight={600} color={colors.textStrong}>
-        Aún no tienes metas
+        {s.home.emptyTitle}
       </T>
       <T size={14} color={colors.textSecondary} style={styles.emptyText}>
-        Crea tu primera meta y mira cómo se llena tu anillo.
+        {s.home.emptyText}
       </T>
-      <Button title="Crear mi primera meta" onPress={() => router.push('/goal/new')} style={styles.emptyButton} />
+      <Button title={s.home.createFirst} onPress={() => router.push('/goal/new')} style={styles.emptyButton} />
     </GlassCard>
   );
 }

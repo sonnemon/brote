@@ -4,7 +4,8 @@ import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useAccount } from '@/db/account';
 import { getDefaultReminderTime, getReminderPermission, requestReminderPermission } from '@/db/reminders';
 import type { Frequency } from '@/lib/progress';
-import { defaultReminder, WEEKDAY_OPTIONS, type ReminderConfig } from '@/lib/reminders';
+import { strings, useStrings } from '@/i18n';
+import { defaultReminder, weekdayOptions, type ReminderConfig } from '@/lib/reminders';
 import { colors } from '@/theme/tokens';
 
 import { Row } from './ListGroup';
@@ -18,9 +19,10 @@ export async function ensureReminderPermission(): Promise<boolean> {
   const permission = await getReminderPermission();
   if (permission === 'granted') return true;
   if (permission === 'undetermined') return requestReminderPermission();
-  Alert.alert('Activa las notificaciones', 'Para recibir recordatorios, permite las notificaciones de Orbe en Ajustes.', [
-    { text: 'Ahora no', style: 'cancel' },
-    { text: 'Abrir Ajustes', onPress: () => void Linking.openSettings() },
+  const s = strings().reminders;
+  Alert.alert(s.permissionTitle, s.permissionText, [
+    { text: s.notNow, style: 'cancel' },
+    { text: s.openSettings, onPress: () => void Linking.openSettings() },
   ]);
   return false;
 }
@@ -40,8 +42,9 @@ type Props = {
 
 export function ReminderRow({ value, frequency, onChange, last }: Props) {
   const { isPlus } = useAccount();
+  const s = useStrings();
 
-  if (!isPlus) return <Row label="Recordatorio" icon="bell" iconColor={colors.cyan} right={<PlusBadge />} onPress={openPlus} last={last} />;
+  if (!isPlus) return <Row label={s.reminders.reminder} icon="bell" iconColor={colors.cyan} right={<PlusBadge />} onPress={openPlus} last={last} />;
 
   const toggle = async (on: boolean) => {
     if (!on) {
@@ -54,16 +57,16 @@ export function ReminderRow({ value, frequency, onChange, last }: Props) {
   return (
     <>
       <Row
-        label="Recordatorio"
+        label={s.reminders.reminder}
         icon="bell"
         iconColor={colors.cyan}
-        right={<Toggle label="Recordatorio" value={value !== null} onChange={(on) => void toggle(on)} />}
+        right={<Toggle label={s.reminders.reminder} value={value !== null} onChange={(on) => void toggle(on)} />}
         last={last && !value}
       />
       {value && (
         <>
           <Row
-            label="Hora"
+            label={s.reminders.time}
             right={
               <DateTimePicker
                 value={dateFromTime(value)}
@@ -71,14 +74,14 @@ export function ReminderRow({ value, frequency, onChange, last }: Props) {
                 display="compact"
                 themeVariant="dark"
                 accentColor={colors.lilac}
-                locale="es-PE"
+                locale={s.locale}
                 onValueChange={(_, date) => onChange({ ...value, hour: date.getHours(), minute: date.getMinutes() })}
               />
             }
           />
           <View style={[styles.days, !last && styles.separator]}>
-            <DayChip label="Todos" wide selected={value.weekday === null} onPress={() => onChange({ ...value, weekday: null })} />
-            {WEEKDAY_OPTIONS.map((day) => (
+            <DayChip label={s.reminders.all} wide selected={value.weekday === null} onPress={() => onChange({ ...value, weekday: null })} />
+            {weekdayOptions().map((day) => (
               <DayChip
                 key={day.value}
                 label={day.label}

@@ -147,9 +147,48 @@ struct Streak: View {
   var body: some View {
     HStack(spacing: 4) {
       Image(systemName: "star").font(.system(size: 12, weight: .semibold))
-      Text("\(days) \(days == 1 ? "día" : "días")").font(Orbe.semibold(14))
+      Text(L.days(days)).font(Orbe.semibold(14))
     }
     .foregroundStyle(Orbe.pink)
+  }
+}
+
+/// Sin Pro: candado y "Toca para desbloquear". Abre el paywall de la app.
+struct LockedWidget: View {
+  var body: some View {
+    VStack(spacing: 8) {
+      ZStack {
+        Circle().fill(LinearGradient(colors: [Orbe.lilac, Orbe.pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+        Image(systemName: "lock.fill").font(.system(size: 18, weight: .semibold)).foregroundStyle(Color(hex: 0x15112A))
+      }
+      .frame(width: 44, height: 44)
+      .shadow(color: Orbe.lilac.opacity(0.6), radius: 10)
+      Text(L.t("Toca para desbloquear", "Tap to unlock"))
+        .font(Orbe.semibold(13))
+        .foregroundStyle(Orbe.text)
+        .multilineTextAlignment(.center)
+      Text("Brote Pro").font(Orbe.regular(11)).foregroundStyle(Orbe.secondary)
+    }
+  }
+}
+
+/// Versión de pantalla bloqueada: un solo tono.
+struct LockedAccessory: View {
+  @Environment(\.widgetFamily) private var family
+
+  var body: some View {
+    switch family {
+    case .accessoryRectangular:
+      HStack(spacing: 6) {
+        Image(systemName: "lock.fill")
+        Text(L.t("Toca para desbloquear", "Tap to unlock")).font(Orbe.semibold(13)).lineLimit(2)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    case .accessoryInline:
+      Label(L.t("Toca para desbloquear", "Tap to unlock"), systemImage: "lock.fill")
+    default:
+      Image(systemName: "lock.fill").font(.system(size: 18, weight: .semibold))
+    }
   }
 }
 
@@ -157,7 +196,7 @@ struct EmptyWidget: View {
   var body: some View {
     VStack(spacing: 6) {
       Image(systemName: "plus.circle").font(.system(size: 24)).foregroundStyle(Orbe.lilac)
-      Text("Crea tu primera meta")
+      Text(L.t("Crea tu primera meta", "Create your first goal"))
         .font(Orbe.medium(13))
         .foregroundStyle(Orbe.text)
         .multilineTextAlignment(.center)
@@ -174,7 +213,9 @@ struct HomeWidget<Content: View>: View {
 
   var body: some View {
     Group {
-      if let snapshot = entry.snapshot {
+      if entry.locked {
+        LockedWidget().widgetURL(URL(string: "orbe:///paywall"))
+      } else if let snapshot = entry.snapshot {
         content(snapshot).widgetURL(URL(string: "orbe:///goal/\(snapshot.goalId)"))
       } else {
         EmptyWidget().widgetURL(URL(string: "orbe:///"))
@@ -191,7 +232,9 @@ struct LockWidget<Content: View>: View {
 
   var body: some View {
     Group {
-      if let snapshot = entry.snapshot {
+      if entry.locked {
+        LockedAccessory().widgetURL(URL(string: "orbe:///paywall"))
+      } else if let snapshot = entry.snapshot {
         content(snapshot).widgetURL(URL(string: "orbe:///goal/\(snapshot.goalId)"))
       } else {
         Image(systemName: "plus.circle").widgetURL(URL(string: "orbe:///"))
@@ -230,7 +273,7 @@ struct SmallRingView: View {
       Ring(progress: snapshot.progress, lineWidth: 9)
       VStack(spacing: 2) {
         Text("\(snapshot.percent)%").font(Orbe.semibold(28)).foregroundStyle(Orbe.text)
-        Text("de tu meta").font(Orbe.regular(11)).foregroundStyle(Orbe.secondary)
+        Text(L.t("de tu meta", "of your goal")).font(Orbe.regular(11)).foregroundStyle(Orbe.secondary)
       }
     }
     .padding(2)
@@ -253,7 +296,7 @@ struct MediumTrendView: View {
           .frame(height: 22)
           .background(Capsule().fill(Orbe.lilac.opacity(0.14)))
         Spacer()
-        Text("Meta \(snapshot.targetText)").font(Orbe.regular(11)).foregroundStyle(Orbe.tertiary)
+        Text("\(L.t("Meta", "Goal")) \(snapshot.targetText)").font(Orbe.regular(11)).foregroundStyle(Orbe.tertiary)
       }
       .frame(width: 136, alignment: .leading)
 
@@ -262,7 +305,7 @@ struct MediumTrendView: View {
         HStack {
           Text(snapshot.startDateLabel)
           Spacer()
-          Text("Hoy")
+          Text(L.t("Hoy", "Today"))
         }
         .font(Orbe.regular(10))
         .foregroundStyle(Orbe.tertiary)
@@ -277,7 +320,7 @@ struct LargeSummaryView: View {
   var body: some View {
     VStack(spacing: 14) {
       HStack {
-        Text("Orbe").font(Orbe.semibold(16)).foregroundStyle(Orbe.text)
+        Text("Brote").font(Orbe.semibold(16)).foregroundStyle(Orbe.text)
         Spacer()
         Streak(days: snapshot.streakDays)
       }
@@ -286,18 +329,18 @@ struct LargeSummaryView: View {
         HeroValue(snapshot: snapshot, size: 54)
       }
       HStack {
-        PillStat(text: "\(snapshot.percent)%", label: "Meta", progress: snapshot.progress, color: Orbe.lilac)
+        PillStat(text: "\(snapshot.percent)%", label: L.t("Meta", "Goal"), progress: snapshot.progress, color: Orbe.lilac)
         Spacer()
-        PillStat(text: "\(snapshot.streakDays) d", label: "Racha", progress: snapshot.streakProgress, color: Orbe.pink)
+        PillStat(text: "\(snapshot.streakDays) d", label: L.t("Racha", "Streak"), progress: snapshot.streakProgress, color: Orbe.pink)
         Spacer()
-        PillStat(text: snapshot.weeklyText, label: "Semana", progress: snapshot.weekProgress, color: Orbe.cyan)
+        PillStat(text: snapshot.weeklyText, label: L.t("Semana", "Week"), progress: snapshot.weekProgress, color: Orbe.cyan)
       }
       VStack(spacing: 4) {
         TrendChart(values: snapshot.series)
         HStack {
           Text(snapshot.startValueLabel)
           Spacer()
-          Text("Hoy")
+          Text(L.t("Hoy", "Today"))
         }
         .font(Orbe.regular(10))
         .foregroundStyle(Orbe.tertiary)
@@ -321,7 +364,7 @@ struct CircularGoalView: View {
 
   var body: some View {
     Gauge(value: snapshot.progress) {
-      Text("META").font(Orbe.medium(9))
+      Text(L.t("META", "GOAL")).font(Orbe.medium(9))
     } currentValueLabel: {
       Text("\(snapshot.percent)").font(Orbe.semibold(18))
     }
@@ -347,7 +390,7 @@ struct RectangularValueView: View {
     VStack(alignment: .leading, spacing: 1) {
       Text(snapshot.name).font(Orbe.semibold(12)).lineLimit(1)
       Text("\(snapshot.valueText) \(snapshot.unit)").font(Orbe.semibold(22)).minimumScaleFactor(0.6).lineLimit(1)
-      Text("\(snapshot.changeText) · meta \(snapshot.targetNumberText)").font(Orbe.regular(11)).opacity(0.8).lineLimit(1)
+      Text("\(snapshot.changeText) · \(L.t("meta", "goal")) \(snapshot.targetNumberText)").font(Orbe.regular(11)).opacity(0.8).lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -358,7 +401,7 @@ struct RectangularTrendView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text("Tendencia 8 sem").font(Orbe.semibold(12)).lineLimit(1)
+      Text(L.t("Tendencia 8 sem", "8-week trend")).font(Orbe.semibold(12)).lineLimit(1)
       TrendLine(values: snapshot.series)
         .stroke(.primary, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
     }

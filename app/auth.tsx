@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,15 +9,27 @@ import { NebulaBackground } from '@/components/NebulaBackground';
 import { T } from '@/components/T';
 import { Field } from '@/components/ui';
 import { CloudNotConfiguredError, sendEmailCode, verifyEmailCode } from '@/db/account';
+import { markOnboarded } from '@/db/store';
 import { isValidEmail } from '@/lib/purchases';
+import { strings, useStrings } from '@/i18n';
 import { colors } from '@/theme/tokens';
 
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof CloudNotConfiguredError ? 'La nube aún no está configurada en esta versión.' : fallback;
+  return error instanceof CloudNotConfiguredError ? strings().auth.notConfigured : fallback;
 }
 
+/**
+ * Correo + código. `mode=signin` es para quien ya tiene Pro y cambió de celular: al entrar se trae
+ * su Pro y sus metas desde la nube. `mode=purchase` va antes de comprar o restaurar Pro, que siempre
+ * queda en una cuenta. `from=onboarding` salta la bienvenida al terminar.
+ */
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
+  const s = useStrings();
+  const { mode, from } = useLocalSearchParams<{ mode?: string; from?: string }>();
+  const signIn = mode === 'signin';
+  // Antes de comprar o restaurar Pro: la compra queda en la cuenta.
+  const purchase = mode === 'purchase';
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -26,7 +38,7 @@ export default function AuthScreen() {
 
   const send = async () => {
     if (!isValidEmail(email)) {
-      setError('Escribe un correo válido.');
+      setError(s.auth.invalidEmail);
       return;
     }
     setBusy(true);
@@ -35,7 +47,7 @@ export default function AuthScreen() {
       await sendEmailCode(email);
       setCodeSent(true);
     } catch (e) {
-      setError(errorMessage(e, 'No pudimos enviar el código. Revisa tu conexión e inténtalo de nuevo.'));
+      setError(errorMessage(e, s.auth.sendFailed));
     } finally {
       setBusy(false);
     }
@@ -43,16 +55,21 @@ export default function AuthScreen() {
 
   const verify = async () => {
     if (code.trim().length < 6) {
-      setError('Escribe el código completo.');
+      setError(s.auth.incompleteCode);
       return;
     }
     setBusy(true);
     setError(null);
     try {
       await verifyEmailCode(email, code);
-      router.back();
+      if (from === 'onboarding') {
+        markOnboarded();
+        router.replace('/');
+      } else {
+        router.back();
+      }
     } catch (e) {
-      setError(errorMessage(e, 'El código no es correcto o ya venció.'));
+      setError(errorMessage(e, s.auth.wrongCode));
     } finally {
       setBusy(false);
     }
@@ -72,18 +89,22 @@ export default function AuthScreen() {
           </View>
           <View style={styles.copy}>
             <T size={28} weight={600} tracking={-0.02} color={colors.textStrong}>
-              {codeSent ? 'Revisa tu correo' : 'Activa tu respaldo'}
+              {codeSent ? s.auth.checkEmail : signIn ? s.auth.signInTitle : purchase ? s.auth.purchaseTitle : s.auth.activate}
             </T>
             <T size={14} color={colors.textSecondary} style={styles.lead}>
               {codeSent
-                ? `Enviamos un código a ${email.trim()}.`
-                : 'Con tu correo guardamos tus metas en la nube. Te enviaremos un código, sin contraseñas.'}
+                ? s.auth.sent(email.trim())
+                : signIn
+                  ? s.auth.signInExplain
+                  : purchase
+                    ? s.auth.purchaseExplain
+                    : s.auth.explain}
             </T>
           </View>
 
           {codeSent ? (
             <Field
-              label="Código"
+              label={s.auth.code}
               value={code}
               onChangeText={(text) => {
                 setCode(text);
@@ -97,7 +118,7 @@ export default function AuthScreen() {
             />
           ) : (
             <Field
-              label="Correo"
+              label={s.auth.email}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -108,7 +129,7 @@ export default function AuthScreen() {
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="tu@correo.com"
+              placeholder={s.auth.emailPlaceholder}
             />
           )}
 
@@ -129,7 +150,7 @@ export default function AuthScreen() {
               }}
             >
               <T size={14} color={colors.lilac}>
-                Usar otro correo
+                {s.auth.otherEmail}
               </T>
             </Pressable>
           )}
@@ -137,14 +158,14 @@ export default function AuthScreen() {
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Button
-            title={busy ? 'Un momento…' : codeSent ? 'Confirmar' : 'Enviar código'}
+            title={busy ? s.common.wait : codeSent ? s.auth.confirm : s.auth.send}
             onPress={codeSent ? verify : send}
             disabled={busy}
             style={styles.stretch}
           />
           <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.back()}>
             <T size={14} color={colors.textSecondary}>
-              Ahora no
+              {s.reminders.notNow}
             </T>
           </Pressable>
         </View>
