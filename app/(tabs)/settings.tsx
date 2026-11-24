@@ -12,7 +12,15 @@ import { PlusBadge } from '@/components/PlusBadge';
 import { dateFromTime, ensureReminderPermission } from '@/components/ReminderRow';
 import { T } from '@/components/T';
 import { Toggle } from '@/components/Toggle';
-import { clearDevPlus, requestSync, setDevTrialEnded, signOut, useAccount, type Account } from '@/db/account';
+import {
+  clearDevPlus,
+  deleteAccount,
+  requestSync,
+  setDevTrialEnded,
+  signOut,
+  useAccount,
+  type Account,
+} from '@/db/account';
 import { exportCsv } from '@/db/export';
 import { setLanguagePref } from '@/db/language';
 import {
@@ -116,6 +124,27 @@ export default function SettingsScreen() {
     Alert.alert(s.settings.signOut, s.settings.signOutText, [
       { text: s.common.cancel, style: 'cancel' },
       { text: s.settings.signOut, style: 'destructive', onPress: () => void signOut() },
+    ]);
+  };
+
+  const [deleting, setDeleting] = useState(false);
+
+  const runDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+    } catch {
+      Alert.alert(s.settings.deleteAccountError, s.common.tryAgain);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    if (deleting) return;
+    Alert.alert(s.settings.deleteAccountTitle, s.settings.deleteAccountText, [
+      { text: s.common.cancel, style: 'cancel' },
+      { text: s.settings.deleteAccountConfirm, style: 'destructive', onPress: () => void runDeleteAccount() },
     ]);
   };
 
@@ -248,6 +277,21 @@ export default function SettingsScreen() {
                 }
               />
             ))}
+          </Section>
+        )}
+
+        {account.email && (
+          <Section>
+            <Row
+              label={s.settings.deleteAccount}
+              icon="trash"
+              iconColor={colors.danger}
+              labelColor={colors.danger}
+              value={deleting ? s.settings.deletingAccount : undefined}
+              onPress={confirmDeleteAccount}
+              dimmed={deleting}
+              last
+            />
           </Section>
         )}
 

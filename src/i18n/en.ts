@@ -217,6 +217,13 @@ export const en: Strings = {
     signOut: 'Sign out',
     recoverGoals: 'Recover your goals',
     signOutText: 'Your goals will stay on this phone, but they will no longer be backed up.',
+    deleteAccount: 'Delete account',
+    deleteAccountTitle: 'Delete your account?',
+    deleteAccountText:
+      'Your account and your entire cloud backup will be deleted. This can’t be undone. Your goals will stay on this phone, and your Pro purchase can be restored.',
+    deleteAccountConfirm: 'Delete permanently',
+    deletingAccount: 'Deleting…',
+    deleteAccountError: "Couldn't delete your account",
     export: 'Export data',
     exportError: "Couldn't export",
     archived: 'ARCHIVED',

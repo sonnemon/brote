@@ -221,6 +221,13 @@ export const es = {
     signOut: 'Cerrar sesión',
     recoverGoals: 'Recupera tus metas',
     signOutText: 'Tus metas seguirán en este celular, pero dejarán de respaldarse.',
+    deleteAccount: 'Borrar cuenta',
+    deleteAccountTitle: '¿Borrar tu cuenta?',
+    deleteAccountText:
+      'Se borrará tu cuenta y todo tu respaldo en la nube. No se puede deshacer. Tus metas seguirán en este celular y tu compra de Pro se puede restaurar.',
+    deleteAccountConfirm: 'Borrar definitivamente',
+    deletingAccount: 'Borrando…',
+    deleteAccountError: 'No se pudo borrar la cuenta',
     export: 'Exportar datos',
     exportError: 'No se pudo exportar',
     archived: 'ARCHIVADAS',
