@@ -6,16 +6,26 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { T } from '@/components/T';
-import { Field, ProgressBar, Segmented } from '@/components/ui';
+import { Field, ProgressBar } from '@/components/ui';
 import { logEntry, useGoal, type GoalView } from '@/db/store';
-import { formatPercent, formatSignedValue, heroInputFontSize, nudgeText, parseDecimal, stepForUnit } from '@/lib/format';
+import {
+  formatCurrentOfTarget,
+  formatDayMonth,
+  formatNumber,
+  formatPercent,
+  heroInputFontSize,
+  nudgeText,
+  parseDecimal,
+  stepForUnit,
+} from '@/lib/format';
+import { defaultLogMode, lastAddedAmount, quickAmounts, type LogMode } from '@/lib/logAmounts';
 import { computeProgress, round2 } from '@/lib/progress';
 import { useStrings } from '@/i18n';
 import { colors, fonts } from '@/theme/tokens';
 
-type Mode = 'value' | 'delta';
-
 const INPUT_WIDTH_SLACK = 8;
+
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 export default function LogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,33 +33,34 @@ export default function LogScreen() {
   return goal ? <LogForm goal={goal} /> : null;
 }
 
+/**
+ * Hoja "Registrar avance": un número grande con − y +, cantidades rápidas y cómo quedará la meta.
+ * Las metas que suben se registran sumando; las que bajan (peso) con el valor total. Fecha y nota
+ * quedan ocultas hasta que se tocan.
+ */
 function LogForm({ goal }: { goal: GoalView }) {
   const s = useStrings();
-  const modes: { value: Mode; label: string }[] = [
-    { value: 'value', label: s.log.newValue },
-    { value: 'delta', label: s.log.change },
-  ];
-  const [mode, setMode] = useState<Mode>('value');
-  const [text, setText] = useState(String(goal.current));
+  const step = stepForUnit(goal.unit);
+  const presets = quickAmounts(step, lastAddedAmount(goal.start_value, goal.entries));
+
+  const [mode, setMode] = useState<LogMode>(() => defaultLogMode(goal.start_value, goal.target_value));
+  const [text, setText] = useState(() => (mode === 'add' ? String(presets[0]) : String(goal.current)));
   const [date, setDate] = useState(() => new Date());
+  const [showDate, setShowDate] = useState(false);
   const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
+  const [inputWidth, setInputWidth] = useState<number>();
 
   const parsed = parseDecimal(text);
-  const value = round2(mode === 'value' ? parsed : goal.current + parsed);
-  const valid = Number.isFinite(value) && (mode === 'value' || parsed !== 0);
-  const before = goal.progress;
-  const after = valid ? computeProgress(goal.start_value, goal.target_value, value) : before;
-  const step = stepForUnit(goal.unit);
-  const [inputWidth, setInputWidth] = useState<number>();
+  const value = round2(mode === 'add' ? goal.current + parsed : parsed);
+  const valid = Number.isFinite(value) && (mode === 'total' || parsed !== 0);
+  const after = valid ? computeProgress(goal.start_value, goal.target_value, value) : goal.progress;
   const fontSize = heroInputFontSize(text);
 
-  const changeMode = (next: Mode) => {
+  const switchMode = () => {
+    const next = mode === 'add' ? 'total' : 'add';
     setMode(next);
-    setText(next === 'value' ? String(goal.current) : '0');
-  };
-
-  const nudge = (direction: 1 | -1) => {
-    setText((current) => nudgeText(current, direction * step));
+    setText(next === 'add' ? String(presets[0]) : String(goal.current));
   };
 
   const save = () => {
@@ -59,22 +70,17 @@ function LogForm({ goal }: { goal: GoalView }) {
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-      <View style={styles.nav}>
-        <Pressable accessibilityRole="button" hitSlop={12} onPress={() => router.back()} style={styles.navSide}>
-          <T size={15} color={colors.textSecondary}>
-            {s.common.cancel}
-          </T>
-        </Pressable>
+      <View style={styles.header}>
         <T size={17} weight={600}>
-          {s.log.title}
+          {goal.name}
         </T>
-        <View style={styles.navSide} />
+        <T size={13} color={colors.textSecondary}>
+          {mode === 'add' ? s.log.addLabel : s.log.totalLabel}
+        </T>
       </View>
 
-      <Segmented options={modes} value={mode} onChange={changeMode} />
-
       <View style={styles.stepper}>
-        <StepButton icon="minus" label={s.log.subtract(step)} onPress={() => nudge(-1)} />
+        <StepButton icon="minus" label={s.log.subtract(step)} onPress={() => setText((t) => nudgeText(t, -step))} />
         <View style={styles.valueWrap}>
           {/* iOS calcula de menos el ancho propio del TextInput y corta el último dígito. */}
           <Text
@@ -84,13 +90,13 @@ function LogForm({ goal }: { goal: GoalView }) {
             onLayout={(event) => setInputWidth(Math.ceil(event.nativeEvent.layout.width))}
             style={[styles.valueInput, styles.valueMeasure, { fontSize }]}
           >
-            {text || '0'}
+            {mode === 'add' ? `+${text || '0'}` : text || '0'}
           </Text>
           <TextInput
-            accessibilityLabel={mode === 'value' ? s.log.newValue : s.log.changeLabel}
-            value={text}
-            onChangeText={setText}
-            keyboardType={mode === 'value' ? 'decimal-pad' : 'numbers-and-punctuation'}
+            accessibilityLabel={mode === 'add' ? s.log.addLabel : s.log.totalLabel}
+            value={mode === 'add' ? `+${text}` : text}
+            onChangeText={(next) => setText(mode === 'add' ? next.replace(/^\+/, '') : next)}
+            keyboardType="decimal-pad"
             keyboardAppearance="dark"
             selectionColor={colors.lilac}
             selectTextOnFocus
@@ -100,21 +106,35 @@ function LogForm({ goal }: { goal: GoalView }) {
             {goal.unit}
           </T>
         </View>
-        <StepButton icon="plus" label={s.log.add(step)} onPress={() => nudge(1)} />
+        <StepButton icon="plus" label={s.log.add(step)} onPress={() => setText((t) => nudgeText(t, step))} />
       </View>
 
+      {mode === 'add' && (
+        <View style={styles.chips}>
+          {presets.map((amount) => {
+            const selected = parsed === amount;
+            return (
+              <Pressable
+                key={amount}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setText(String(amount))}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                <T size={14} weight={600} color={selected ? colors.bg : colors.textStrong}>
+                  +{formatNumber(amount)}
+                </T>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       <View style={styles.impact}>
-        {valid && (
-          <View style={styles.diff}>
-            <T size={13} color="#B5EEF6">
-              {formatSignedValue(value - goal.current, goal.unit)} {s.log.vsLast}
-            </T>
-          </View>
-        )}
+        <T size={14} color={colors.textSecondary}>
+          {s.log.willBe(formatCurrentOfTarget(valid ? value : goal.current, goal.target_value, goal.unit))}
+        </T>
         <View style={styles.barRow}>
-          <T size={12} color={colors.textTertiary}>
-            {formatPercent(before)}
-          </T>
           <ProgressBar progress={after} />
           <T size={12} weight={600} color={colors.textStrong}>
             {formatPercent(after)}
@@ -122,34 +142,40 @@ function LogForm({ goal }: { goal: GoalView }) {
         </View>
       </View>
 
-      <View style={styles.card}>
-        <View style={[styles.row, styles.separator]}>
-          <View style={styles.rowLabel}>
-            <Icon name="calendar" size={18} color={colors.lilac} />
-            <T size={15}>{s.log.date}</T>
-          </View>
+      <View style={styles.extras}>
+        <Pill icon="calendar" label={isSameDay(date, new Date()) ? s.common.today : formatDayMonth(date)} active={showDate} onPress={() => setShowDate((v) => !v)} />
+        <Pill icon="plus" label={s.log.addNote} active={showNote} onPress={() => setShowNote((v) => !v)} />
+      </View>
+
+      {showDate && (
+        <View style={styles.datePicker}>
           <DateTimePicker
             value={date}
             mode="date"
-            display="compact"
+            display="inline"
             themeVariant="dark"
             accentColor={colors.lilac}
             locale={s.locale}
             maximumDate={new Date()}
-            onValueChange={(_, next) => setDate(next)}
+            onValueChange={(_, next) => {
+              setDate(next);
+              setShowDate(false);
+            }}
           />
         </View>
-        <Field
-          value={note}
-          onChangeText={setNote}
-          placeholder={s.log.notePlaceholder}
-          accessibilityLabel={s.log.note}
-          maxLength={140}
-          style={styles.note}
-        />
-      </View>
+      )}
 
-      <Button title={s.common.save} onPress={save} disabled={!valid} />
+      {showNote && (
+        <Field value={note} onChangeText={setNote} placeholder={s.log.notePlaceholder} accessibilityLabel={s.log.note} maxLength={140} autoFocus />
+      )}
+
+      <Button title={s.log.save} onPress={save} disabled={!valid} />
+
+      <Pressable accessibilityRole="button" hitSlop={8} onPress={switchMode} style={styles.switch}>
+        <T size={13} color={colors.lilac}>
+          {mode === 'add' ? s.log.switchToTotal : s.log.switchToAdd}
+        </T>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -162,11 +188,19 @@ function StepButton({ icon, label, onPress }: { icon: 'plus' | 'minus'; label: s
   );
 }
 
+function Pill({ icon, label, active, onPress }: { icon: 'calendar' | 'plus'; label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: active }} onPress={onPress} style={[styles.pill, active && styles.pillActive]}>
+      <Icon name={icon} size={16} color={colors.lilac} />
+      <T size={14}>{label}</T>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 32, gap: 16 },
-  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  navSide: { width: 70 },
-  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, gap: 8 },
+  content: { paddingTop: 28, paddingHorizontal: 20, paddingBottom: 32, gap: 18 },
+  header: { alignItems: 'center', gap: 4 },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stepButton: {
     width: 56,
     height: 56,
@@ -189,20 +223,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   valueMeasure: { position: 'absolute', opacity: 0 },
-  impact: { alignItems: 'center', gap: 8 },
-  diff: {
-    height: 28,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+  chips: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    minWidth: 64,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 19,
     borderWidth: 1,
-    borderColor: 'rgba(143,227,240,0.26)',
-    backgroundColor: 'rgba(143,227,240,0.12)',
+    borderColor: 'rgba(201,182,255,0.24)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  chipSelected: { backgroundColor: colors.lilac, borderColor: colors.lilac },
+  impact: { alignItems: 'center', gap: 8 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  card: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(201,182,255,0.14)', backgroundColor: 'rgba(255,255,255,0.05)' },
-  row: { minHeight: 50, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowLabel: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  separator: { borderBottomWidth: 1, borderBottomColor: 'rgba(201,182,255,0.08)' },
-  note: { borderWidth: 0, backgroundColor: 'transparent', height: 50, fontSize: 15 },
+  extras: { flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  pill: {
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(201,182,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pillActive: { borderColor: 'rgba(201,182,255,0.4)' },
+  datePicker: { borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+  switch: { alignSelf: 'center' },
 });

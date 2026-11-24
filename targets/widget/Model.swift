@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -39,6 +40,15 @@ struct OrbeSnapshot: Codable {
     startDateLabel: "20 sep",
     startValueLabel: "85 kg · 20 sep"
   )
+
+  /// Todas las metas (id → snapshot), para el widget configurado con una meta concreta.
+  static func loadAll() -> [String: OrbeSnapshot] {
+    guard
+      let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_snapshots"),
+      let data = text.data(using: .utf8)
+    else { return [:] }
+    return (try? JSONDecoder().decode([String: OrbeSnapshot].self, from: data)) ?? [:]
+  }
 
   static func load() -> OrbeSnapshot? {
     guard
@@ -91,30 +101,51 @@ struct OrbeEntry: TimelineEntry {
   var locked = false
 }
 
+/// Configuración de los widgets de una meta: cuál meta muestran.
+struct SelectGoalIntent: WidgetConfigurationIntent {
+  static var title: LocalizedStringResource = "Choose goal"
+  static var description = IntentDescription("Pick which goal the widget shows.")
+
+  /// Fila "Meta  Casa"; al tocarla, un menú con todas las metas. Por defecto, la meta de Ajustes.
+  @Parameter(title: "View", optionsProvider: GoalOptionsProvider())
+  var goal: String?
+
+  init() {}
+}
+
 /// La app avisa con `reloadWidget` cada vez que cambian los datos.
-struct OrbeProvider: TimelineProvider {
+struct OrbeProvider: AppIntentTimelineProvider {
+  /// La meta configurada en el widget; si no hay o se borró, la de Ajustes.
+  private func snapshot(for configuration: SelectGoalIntent) -> OrbeSnapshot? {
+    // El valor es el id (elegido en el menú) o el nombre (valor por defecto al agregar el widget).
+    if let value = configuration.goal {
+      let all = OrbeSnapshot.loadAll()
+      if let chosen = all[value] ?? all.values.first(where: { $0.name == value }) { return chosen }
+    }
+    return OrbeSnapshot.load()
+  }
+
   func placeholder(in context: Context) -> OrbeEntry {
     OrbeEntry(date: .now, snapshot: .sample)
   }
 
-  func getSnapshot(in context: Context, completion: @escaping (OrbeEntry) -> Void) {
+  func snapshot(for configuration: SelectGoalIntent, in context: Context) async -> OrbeEntry {
     // La galería siempre muestra el widget con datos, para que se vea qué se desbloquea.
     if context.isPreview {
-      completion(OrbeEntry(date: .now, snapshot: OrbeSnapshot.load() ?? .sample))
-    } else {
-      completion(OrbeEntry(date: .now, snapshot: OrbeSnapshot.load(), locked: ProAccess.isLocked(at: .now)))
+      return OrbeEntry(date: .now, snapshot: snapshot(for: configuration) ?? .sample)
     }
+    return OrbeEntry(date: .now, snapshot: snapshot(for: configuration), locked: ProAccess.isLocked(at: .now))
   }
 
-  func getTimeline(in context: Context, completion: @escaping (Timeline<OrbeEntry>) -> Void) {
+  func timeline(for configuration: SelectGoalIntent, in context: Context) async -> Timeline<OrbeEntry> {
     let now = Date.now
-    let snapshot = OrbeSnapshot.load()
+    let snapshot = snapshot(for: configuration)
     var entries = [OrbeEntry(date: now, snapshot: snapshot, locked: ProAccess.isLocked(at: now))]
     // Al terminar la prueba el widget se bloquea solo, aunque la app no se abra.
     if let until = ProAccess.until(), until > now {
       entries.append(OrbeEntry(date: until, snapshot: snapshot, locked: true))
     }
-    completion(Timeline(entries: entries, policy: .never))
+    return Timeline(entries: entries, policy: .never)
   }
 }
 

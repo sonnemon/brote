@@ -164,15 +164,17 @@ export const es = {
 
   log: {
     title: 'Registrar avance',
-    newValue: 'Valor nuevo',
-    change: 'Cambio ±',
-    changeLabel: 'Cambio',
+    addLabel: 'Cuánto sumas',
+    totalLabel: 'Tu valor de hoy',
     subtract: (step: number) => `Restar ${step}`,
     add: (step: number) => `Sumar ${step}`,
-    vsLast: 'vs. último registro',
-    date: 'Fecha',
+    willBe: (value: string) => `Quedarás en ${value}`,
+    addNote: 'Nota',
     note: 'Nota',
     notePlaceholder: 'Agrega una nota (opcional)',
+    save: 'Registrar',
+    switchToTotal: 'Escribir el valor total',
+    switchToAdd: 'Escribir cuánto sumas',
   },
 
   completed: {
@@ -221,6 +223,13 @@ export const es = {
     signOut: 'Cerrar sesión',
     recoverGoals: 'Recupera tus metas',
     signOutText: 'Tus metas seguirán en este celular, pero dejarán de respaldarse.',
+    deleteAccount: 'Borrar cuenta',
+    deleteAccountTitle: '¿Borrar tu cuenta?',
+    deleteAccountText:
+      'Se borrará tu cuenta y todo tu respaldo en la nube. No se puede deshacer. Tus metas seguirán en este celular y tu compra de Pro se puede restaurar.',
+    deleteAccountConfirm: 'Borrar definitivamente',
+    deletingAccount: 'Borrando…',
+    deleteAccountError: 'No se pudo borrar la cuenta',
     export: 'Exportar datos',
     exportError: 'No se pudo exportar',
     archived: 'ARCHIVADAS',

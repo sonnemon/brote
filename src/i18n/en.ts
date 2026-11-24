@@ -160,15 +160,17 @@ export const en: Strings = {
 
   log: {
     title: 'Log progress',
-    newValue: 'New value',
-    change: 'Change ±',
-    changeLabel: 'Change',
+    addLabel: 'How much to add',
+    totalLabel: 'Your value today',
     subtract: (step: number) => `Subtract ${step}`,
     add: (step: number) => `Add ${step}`,
-    vsLast: 'vs. last entry',
-    date: 'Date',
+    willBe: (value: string) => `You'll be at ${value}`,
+    addNote: 'Note',
     note: 'Note',
     notePlaceholder: 'Add a note (optional)',
+    save: 'Log',
+    switchToTotal: 'Enter the total instead',
+    switchToAdd: 'Enter how much to add',
   },
 
   completed: {
@@ -217,6 +219,13 @@ export const en: Strings = {
     signOut: 'Sign out',
     recoverGoals: 'Recover your goals',
     signOutText: 'Your goals will stay on this phone, but they will no longer be backed up.',
+    deleteAccount: 'Delete account',
+    deleteAccountTitle: 'Delete your account?',
+    deleteAccountText:
+      'Your account and your entire cloud backup will be deleted. This can’t be undone. Your goals will stay on this phone, and your Pro purchase can be restored.',
+    deleteAccountConfirm: 'Delete permanently',
+    deletingAccount: 'Deleting…',
+    deleteAccountError: "Couldn't delete your account",
     export: 'Export data',
     exportError: "Couldn't export",
     archived: 'ARCHIVED',

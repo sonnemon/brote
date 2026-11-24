@@ -294,3 +294,23 @@ export async function signOut() {
   deleteKv(SERVER_PLUS_KEY);
   publish();
 }
+
+/**
+ * Borra la cuenta y su respaldo en la nube (metas, registros y perfil, por cascade en el servidor).
+ * Las metas de este celular se conservan, como al cerrar sesión. La compra de Pro sigue ligada a la
+ * cuenta de la tienda y se puede restaurar.
+ */
+export async function deleteAccount() {
+  const client = requireClient();
+  if (debounce) {
+    clearTimeout(debounce);
+    debounce = null;
+  }
+  const { error } = await client.rpc('delete_my_account');
+  if (error) throw error;
+  // El usuario ya no existe: se limpia la sesión local sin llamar al servidor.
+  await client.auth.signOut({ scope: 'local' });
+  deleteKv(SERVER_PLUS_KEY);
+  deleteKv(LAST_SYNC_KEY);
+  publish();
+}

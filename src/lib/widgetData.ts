@@ -1,6 +1,7 @@
 import { strings } from '../i18n';
 
 import { formatDayMonth, formatNumber, formatSigned, formatValue } from './format';
+import { widgetSymbol } from './widgetSymbols';
 import { clamp, streakDays, suggestedPace, weeklyChange, weeklySeries, type EntryPoint, type Frequency } from './progress';
 
 export type WidgetGoal = {
@@ -39,7 +40,44 @@ export type WidgetSnapshot = {
   startValueLabel: string;
 };
 
+/** Una meta en los widgets de varias metas ("Mis metas"). */
+export type WidgetGoalItem = {
+  id: string;
+  name: string;
+  valueText: string;
+  unit: string;
+  targetNumberText: string;
+  percent: number;
+  progress: number;
+  /** "#RRGGBB" */
+  color: string;
+  /** SF Symbol. */
+  symbol: string;
+  completed: boolean;
+};
+
 const STREAK_RING_DAYS = 30;
+
+/**
+ * Todas las metas visibles para que el widget las ofrezca al configurarlo: primero las activas y
+ * luego las cumplidas, cada grupo en el orden de la app (la más reciente primero).
+ */
+export function buildWidgetGoalItems(goals: readonly (WidgetGoal & { color: string; icon: string })[]): WidgetGoalItem[] {
+  const visible = goals.filter((goal) => !goal.archived_at);
+  const ordered = [...visible.filter((goal) => !goal.completed_at), ...visible.filter((goal) => goal.completed_at)];
+  return ordered.map((goal) => ({
+    id: goal.id,
+    name: goal.name,
+    valueText: formatNumber(goal.current),
+    unit: goal.unit,
+    targetNumberText: formatNumber(goal.target_value),
+    percent: Math.round(goal.progress * 100),
+    progress: clamp(goal.progress, 0, 1),
+    color: goal.color,
+    symbol: widgetSymbol(goal.icon),
+    completed: goal.completed_at !== null,
+  }));
+}
 
 /** La meta elegida; si ya no está disponible, la primera activa y luego cualquiera. */
 export function selectWidgetGoal<G extends WidgetGoal>(goals: readonly G[], selectedId: string | null): G | null {
