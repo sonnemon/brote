@@ -25,7 +25,7 @@ struct GoalItem: Codable, Identifiable {
 
   static func loadAll() -> [GoalItem] {
     guard
-      let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_goals"),
+      let text = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_goals"),
       let data = text.data(using: .utf8)
     else { return [] }
     return (try? JSONDecoder().decode([GoalItem].self, from: data)) ?? []
@@ -249,7 +249,7 @@ struct GoalsProvider: AppIntentTimelineProvider {
 
 // MARK: - Vistas
 
-private func goalURL(_ goal: GoalItem) -> URL { URL(string: "orbe:///goal/\(goal.id)")! }
+private func goalURL(_ goal: GoalItem) -> URL { URL(string: "brote:///goal/\(goal.id)")! }
 
 private func countText(active: Int, completed: Int) -> String {
   let activeText = L.isEnglish ? "\(active) active" : "\(active) \(active == 1 ? "activa" : "activas")"
@@ -430,9 +430,9 @@ struct GoalsView: View {
   var body: some View {
     Group {
       if entry.locked {
-        LockedWidget().widgetURL(URL(string: "orbe:///paywall"))
+        LockedWidget().widgetURL(URL(string: "brote:///paywall"))
       } else if entry.goals.isEmpty {
-        EmptyWidget().widgetURL(URL(string: "orbe:///"))
+        EmptyWidget().widgetURL(URL(string: "brote:///"))
       } else if family == .systemSmall, let goal = entry.goals.first {
         // El pequeño no admite enlaces por fila: todo el widget abre la meta.
         SmallGoalView(goal: goal).widgetURL(goalURL(goal))
@@ -443,7 +443,7 @@ struct GoalsView: View {
           default: GoalList(goals: entry.goals.prefix(3), style: .medium, capacity: 3)
           }
         }
-        .widgetURL(URL(string: "orbe:///"))
+        .widgetURL(URL(string: "brote:///"))
       }
     }
     .containerBackground(for: .widget) { OrbeBackground() }
