@@ -118,41 +118,6 @@ struct TrendChart: View {
   }
 }
 
-struct PillStat: View {
-  let text: String
-  let label: String
-  let progress: Double
-  let color: Color
-
-  var body: some View {
-    VStack(spacing: 4) {
-      ZStack {
-        Capsule().stroke(color.opacity(0.14), lineWidth: 3.5)
-        if progress > 0 {
-          Capsule()
-            .trim(from: 0, to: progress)
-            .stroke(color, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
-        }
-        Text(text).font(Orbe.semibold(17)).foregroundStyle(Orbe.text).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 8)
-      }
-      .frame(width: 92, height: 44)
-      Text(label).font(Orbe.regular(11)).foregroundStyle(color)
-    }
-  }
-}
-
-struct Streak: View {
-  let days: Int
-
-  var body: some View {
-    HStack(spacing: 4) {
-      Image(systemName: "star").font(.system(size: 12, weight: .semibold))
-      Text(L.days(days)).font(Orbe.semibold(14))
-    }
-    .foregroundStyle(Orbe.pink)
-  }
-}
-
 /// Sin Pro: candado y "Toca para desbloquear". Abre el paywall de la app.
 struct LockedWidget: View {
   var body: some View {
@@ -310,49 +275,6 @@ struct MediumTrendView: View {
         .font(Orbe.regular(10))
         .foregroundStyle(Orbe.tertiary)
       }
-    }
-  }
-}
-
-struct LargeSummaryView: View {
-  let snapshot: OrbeSnapshot
-
-  var body: some View {
-    VStack(spacing: 14) {
-      HStack {
-        Text("Brote").font(Orbe.semibold(16)).foregroundStyle(Orbe.text)
-        Spacer()
-        Streak(days: snapshot.streakDays)
-      }
-      VStack(spacing: 4) {
-        Text(snapshot.name).font(Orbe.regular(12)).foregroundStyle(Orbe.lilac).lineLimit(1)
-        HeroValue(snapshot: snapshot, size: 54)
-      }
-      HStack {
-        PillStat(text: "\(snapshot.percent)%", label: L.t("Meta", "Goal"), progress: snapshot.progress, color: Orbe.lilac)
-        Spacer()
-        PillStat(text: "\(snapshot.streakDays) d", label: L.t("Racha", "Streak"), progress: snapshot.streakProgress, color: Orbe.pink)
-        Spacer()
-        PillStat(text: snapshot.weeklyText, label: L.t("Semana", "Week"), progress: snapshot.weekProgress, color: Orbe.cyan)
-      }
-      VStack(spacing: 4) {
-        TrendChart(values: snapshot.series)
-        HStack {
-          Text(snapshot.startValueLabel)
-          Spacer()
-          Text(L.t("Hoy", "Today"))
-        }
-        .font(Orbe.regular(10))
-        .foregroundStyle(Orbe.tertiary)
-      }
-      .padding(.horizontal, 12)
-      .padding(.top, 10)
-      .padding(.bottom, 8)
-      .background(
-        RoundedRectangle(cornerRadius: 16)
-          .fill(Color(hex: 0x17132E).opacity(0.7))
-          .overlay(RoundedRectangle(cornerRadius: 16).stroke(Orbe.lilac.opacity(0.12)))
-      )
     }
   }
 }

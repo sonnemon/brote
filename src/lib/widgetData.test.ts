@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildWidgetSnapshot, selectWidgetGoal, type WidgetGoal } from './widgetData';
+import { DEFAULT_ICON, GOAL_ICONS } from './goalIcons';
+import { buildWidgetGoalItems, buildWidgetSnapshot, selectWidgetGoal, type WidgetGoal } from './widgetData';
+import { DEFAULT_SYMBOL, widgetSymbol } from './widgetSymbols';
 
 const now = new Date(2026, 10, 8, 12);
 const iso = (d: number, month = 10) => new Date(2026, month, d, 12).toISOString();
@@ -73,5 +75,50 @@ describe('selectWidgetGoal', () => {
   });
   it('sin metas devuelve null', () => {
     expect(selectWidgetGoal([archived], null)).toBeNull();
+  });
+});
+
+describe('buildWidgetGoalItems', () => {
+  const styled = (over: Partial<WidgetGoal & { color: string; icon: string }>) => ({
+    ...goal,
+    color: '#C9B6FF',
+    icon: 'book-open',
+    ...over,
+  });
+
+  it('pone primero las activas, luego las cumplidas y oculta las archivadas', () => {
+    const items = buildWidgetGoalItems([
+      styled({ id: 'done', completed_at: iso(5) }),
+      styled({ id: 'active' }),
+      styled({ id: 'archived', archived_at: iso(6) }),
+    ]);
+    expect(items.map((item) => [item.id, item.completed])).toEqual([
+      ['active', false],
+      ['done', true],
+    ]);
+  });
+
+  it('formatea valor, meta, porcentaje, color y símbolo', () => {
+    const [item] = buildWidgetGoalItems([styled({})]);
+    expect(item).toMatchObject({
+      name: 'Peso',
+      valueText: '78.4',
+      unit: 'kg',
+      targetNumberText: '72',
+      percent: 51,
+      color: '#C9B6FF',
+      symbol: 'book',
+    });
+  });
+});
+
+describe('widgetSymbol', () => {
+  it('tiene un SF Symbol propio para cada icono del catálogo', () => {
+    const missing = GOAL_ICONS.filter((icon) => icon.key !== DEFAULT_ICON && widgetSymbol(icon.key) === DEFAULT_SYMBOL);
+    expect(missing.map((icon) => icon.key)).toEqual([]);
+  });
+
+  it('usa la estrella para iconos desconocidos', () => {
+    expect(widgetSymbol('no-existe')).toBe(DEFAULT_SYMBOL);
   });
 });

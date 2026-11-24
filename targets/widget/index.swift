@@ -7,7 +7,7 @@ struct OrbeWidgets: WidgetBundle {
     ValueWidget()
     RingWidget()
     TrendWidget()
-    SummaryWidget()
+    GoalsWidget()
     StreakWidget()
   }
 }
@@ -27,7 +27,7 @@ struct ValueView: View {
 
 struct ValueWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "OrbeValue", provider: OrbeProvider()) { ValueView(entry: $0) }
+    AppIntentConfiguration(kind: "OrbeValue", intent: SelectGoalIntent.self, provider: OrbeProvider()) { ValueView(entry: $0) }
       .configurationDisplayName(L.t("Valor actual", "Current value"))
       .description(L.t("Tu número de hoy y cuánto has avanzado.", "Today's number and how far you've come."))
       .supportedFamilies([.systemSmall, .accessoryRectangular, .accessoryInline])
@@ -49,7 +49,7 @@ struct RingView: View {
 
 struct RingWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "OrbeRing", provider: OrbeProvider()) { RingView(entry: $0) }
+    AppIntentConfiguration(kind: "OrbeRing", intent: SelectGoalIntent.self, provider: OrbeProvider()) { RingView(entry: $0) }
       .configurationDisplayName(L.t("Anillo de meta", "Goal ring"))
       .description(L.t("El porcentaje de tu meta. Ideal para StandBy.", "Your goal percentage. Great for StandBy."))
       .supportedFamilies([.systemSmall, .accessoryCircular])
@@ -71,27 +71,16 @@ struct TrendView: View {
 
 struct TrendWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "OrbeTrend", provider: OrbeProvider()) { TrendView(entry: $0) }
+    AppIntentConfiguration(kind: "OrbeTrend", intent: SelectGoalIntent.self, provider: OrbeProvider()) { TrendView(entry: $0) }
       .configurationDisplayName(L.t("Tendencia", "Trend"))
       .description(L.t("Cómo va tu meta en las últimas 8 semanas.", "How your goal has gone over the last 8 weeks."))
       .supportedFamilies([.systemMedium, .accessoryRectangular])
   }
 }
 
-struct SummaryWidget: Widget {
-  var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "OrbeSummary", provider: OrbeProvider()) { entry in
-      HomeWidget(entry: entry) { LargeSummaryView(snapshot: $0) }
-    }
-    .configurationDisplayName(L.t("Resumen", "Summary"))
-    .description(L.t("Valor, racha, ritmo y tendencia.", "Value, streak, pace and trend."))
-    .supportedFamilies([.systemLarge])
-  }
-}
-
 struct StreakWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "OrbeStreak", provider: OrbeProvider()) { entry in
+    AppIntentConfiguration(kind: "OrbeStreak", intent: SelectGoalIntent.self, provider: OrbeProvider()) { entry in
       LockWidget(entry: entry) { CircularStreakView(snapshot: $0) }
     }
     .configurationDisplayName(L.t("Racha", "Streak"))
