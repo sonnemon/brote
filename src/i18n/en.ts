@@ -160,15 +160,17 @@ export const en: Strings = {
 
   log: {
     title: 'Log progress',
-    newValue: 'New value',
-    change: 'Change ±',
-    changeLabel: 'Change',
+    addLabel: 'How much to add',
+    totalLabel: 'Your value today',
     subtract: (step: number) => `Subtract ${step}`,
     add: (step: number) => `Add ${step}`,
-    vsLast: 'vs. last entry',
-    date: 'Date',
+    willBe: (value: string) => `You'll be at ${value}`,
+    addNote: 'Note',
     note: 'Note',
     notePlaceholder: 'Add a note (optional)',
+    save: 'Log',
+    switchToTotal: 'Enter the total instead',
+    switchToAdd: 'Enter how much to add',
   },
 
   completed: {

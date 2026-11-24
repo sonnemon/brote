@@ -164,15 +164,17 @@ export const es = {
 
   log: {
     title: 'Registrar avance',
-    newValue: 'Valor nuevo',
-    change: 'Cambio ±',
-    changeLabel: 'Cambio',
+    addLabel: 'Cuánto sumas',
+    totalLabel: 'Tu valor de hoy',
     subtract: (step: number) => `Restar ${step}`,
     add: (step: number) => `Sumar ${step}`,
-    vsLast: 'vs. último registro',
-    date: 'Fecha',
+    willBe: (value: string) => `Quedarás en ${value}`,
+    addNote: 'Nota',
     note: 'Nota',
     notePlaceholder: 'Agrega una nota (opcional)',
+    save: 'Registrar',
+    switchToTotal: 'Escribir el valor total',
+    switchToAdd: 'Escribir cuánto sumas',
   },
 
   completed: {
