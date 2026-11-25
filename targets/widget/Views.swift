@@ -179,11 +179,11 @@ struct HomeWidget<Content: View>: View {
   var body: some View {
     Group {
       if entry.locked {
-        LockedWidget().widgetURL(URL(string: "orbe:///paywall"))
+        LockedWidget().widgetURL(URL(string: "brote:///paywall"))
       } else if let snapshot = entry.snapshot {
-        content(snapshot).widgetURL(URL(string: "orbe:///goal/\(snapshot.goalId)"))
+        content(snapshot).widgetURL(URL(string: "brote:///goal/\(snapshot.goalId)"))
       } else {
-        EmptyWidget().widgetURL(URL(string: "orbe:///"))
+        EmptyWidget().widgetURL(URL(string: "brote:///"))
       }
     }
     .containerBackground(for: .widget) { OrbeBackground() }
@@ -198,11 +198,11 @@ struct LockWidget<Content: View>: View {
   var body: some View {
     Group {
       if entry.locked {
-        LockedAccessory().widgetURL(URL(string: "orbe:///paywall"))
+        LockedAccessory().widgetURL(URL(string: "brote:///paywall"))
       } else if let snapshot = entry.snapshot {
-        content(snapshot).widgetURL(URL(string: "orbe:///goal/\(snapshot.goalId)"))
+        content(snapshot).widgetURL(URL(string: "brote:///goal/\(snapshot.goalId)"))
       } else {
-        Image(systemName: "plus.circle").widgetURL(URL(string: "orbe:///"))
+        Image(systemName: "plus.circle").widgetURL(URL(string: "brote:///"))
       }
     }
     .containerBackground(for: .widget) { AccessoryWidgetBackground() }

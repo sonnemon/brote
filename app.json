@@ -1,17 +1,17 @@
 {
   "expo": {
     "name": "Brote",
-    "slug": "orbe",
+    "slug": "brote",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icons/ios-light.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pe.orbe.app",
+      "bundleIdentifier": "pe.brote.app",
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.pe.orbe.app"
+          "group.pe.brote.app"
         ]
       },
       "icon": {
@@ -71,7 +71,7 @@
         }
       ]
     ],
-    "scheme": "orbe",
+    "scheme": "brote",
     "backgroundColor": "#07061A",
     "experiments": {
       "typedRoutes": false

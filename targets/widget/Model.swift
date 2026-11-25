@@ -44,7 +44,7 @@ struct OrbeSnapshot: Codable {
   /// Todas las metas (id → snapshot), para el widget configurado con una meta concreta.
   static func loadAll() -> [String: OrbeSnapshot] {
     guard
-      let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_snapshots"),
+      let text = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_snapshots"),
       let data = text.data(using: .utf8)
     else { return [:] }
     return (try? JSONDecoder().decode([String: OrbeSnapshot].self, from: data)) ?? [:]
@@ -52,7 +52,7 @@ struct OrbeSnapshot: Codable {
 
   static func load() -> OrbeSnapshot? {
     guard
-      let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_snapshot"),
+      let text = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_snapshot"),
       let data = text.data(using: .utf8)
     else { return nil }
     return try? JSONDecoder().decode(OrbeSnapshot.self, from: data)
@@ -63,7 +63,7 @@ struct OrbeSnapshot: Codable {
 /// Sin ese dato, sigue el idioma del sistema.
 enum L {
   static var isEnglish: Bool {
-    if let lang = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_lang") {
+    if let lang = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_lang") {
       return lang == "en"
     }
     return !(Locale.preferredLanguages.first ?? "es").hasPrefix("es")
@@ -80,7 +80,7 @@ enum L {
 /// vacío o vencido significa que los widgets se muestran bloqueados.
 enum ProAccess {
   static func until() -> Date? {
-    guard let text = UserDefaults(suiteName: "group.pe.orbe.app")?.string(forKey: "widget_pro_until"), !text.isEmpty
+    guard let text = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_pro_until"), !text.isEmpty
     else { return nil }
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
