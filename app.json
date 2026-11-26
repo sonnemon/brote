@@ -8,16 +8,26 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pe.brote.app",
+      "bundleIdentifier": "dev.carloshmitma.brote",
+      "appleTeamId": "52MA26958Q",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.pe.brote.app"
+          "group.dev.carloshmitma.brote"
         ]
       },
       "icon": {
         "light": "./assets/icons/ios-light.png",
         "dark": "./assets/icons/ios-dark.png",
         "tinted": "./assets/icons/ios-tinted.png"
+      },
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "es",
+          "en"
+        ]
       }
     },
     "android": {
@@ -75,6 +85,34 @@
     "backgroundColor": "#07061A",
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "bundleIdentifier": "dev.carloshmitma.brote.widget",
+                  "targetName": "OrbeWidget",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.dev.carloshmitma.brote"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "e8031c10-4acd-4d1d-a2af-b1762825dced"
+      }
+    },
+    "owner": "sonnemon"
   }
 }
