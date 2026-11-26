@@ -1,12 +1,19 @@
 /* Pantalla "Editar widget" de iOS. */
 "Choose goals" = "Elegir metas";
-"Pick which goals the widget shows." = "Elige qué metas muestra el widget.";
+"Goal" = "Meta";
 "Choose goal" = "Elegir meta";
 "Pick which goal the widget shows." = "Elige qué meta muestra el widget.";
-"View" = "Vista";
-"View 1" = "Vista 1";
-"View 2" = "Vista 2";
-"View 3" = "Vista 3";
-"View 4" = "Vista 4";
-"View 5" = "Vista 5";
+"Goal 1" = "Meta 1";
+"Goal 2" = "Meta 2";
+"Goal 3" = "Meta 3";
+"Goal 4" = "Meta 4";
+"Goal 5" = "Meta 5";
 "None" = "Ninguna";
+"Pick which goals the widget shows. The small widget shows goal 1 on the Home Screen and up to 4 in StandBy." = "Elige qué metas muestra el widget. El pequeño muestra la meta 1 en la pantalla de inicio y hasta 4 en StandBy.";
+"Goal 2 · StandBy" = "Meta 2 · StandBy";
+"Goal 3 · StandBy" = "Meta 3 · StandBy";
+"Goal 4 · StandBy" = "Meta 4 · StandBy";
+"Style · StandBy" = "Estilo · StandBy";
+"Style" = "Estilo";
+"Rings" = "Anillos";
+"Bars" = "Barras";

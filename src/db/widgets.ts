@@ -8,7 +8,7 @@ import { getAccount, subscribeAccount } from './account';
 import { getKv, setKv } from './repo';
 import { getAllGoals, subscribeGoals } from './store';
 
-const APP_GROUP = 'group.pe.brote.app';
+const APP_GROUP = 'group.dev.carloshmitma.brote';
 const STORAGE_KEY = 'widget_snapshot';
 const SELECTED_KEY = 'widget_goal_id';
 /** Todas las metas, para el widget "Mis metas" y para elegir cuáles muestra al configurarlo. */

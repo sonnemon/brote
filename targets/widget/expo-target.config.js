@@ -6,6 +6,6 @@ module.exports = {
   deploymentTarget: '17.0',
   frameworks: ['SwiftUI', 'WidgetKit'],
   entitlements: {
-    'com.apple.security.application-groups': ['group.pe.brote.app'],
+    'com.apple.security.application-groups': ['group.dev.carloshmitma.brote'],
   },
 };

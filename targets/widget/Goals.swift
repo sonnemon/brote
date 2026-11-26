@@ -25,7 +25,7 @@ struct GoalItem: Codable, Identifiable {
 
   static func loadAll() -> [GoalItem] {
     guard
-      let text = UserDefaults(suiteName: "group.pe.brote.app")?.string(forKey: "widget_goals"),
+      let text = UserDefaults(suiteName: "group.dev.carloshmitma.brote")?.string(forKey: "widget_goals"),
       let data = text.data(using: .utf8)
     else { return [] }
     return (try? JSONDecoder().decode([GoalItem].self, from: data)) ?? []
@@ -52,14 +52,14 @@ extension Color {
 
 // MARK: - Configuración: elegir metas
 
-// En "Editar widget" cada meta es una fila "View  Casa" y al tocarla iOS abre un menú con todas las
+// En "Editar widget" cada meta es una fila "Meta  Casa" y al tocarla iOS abre un menú con todas las
 // metas de la app (como el "View" del widget de Todoist).
 //
 // Qué se guarda: al elegir en el menú, el id de la meta (iOS muestra el título del menú). Los valores
 // por defecto, en cambio, iOS los muestra tal cual, así que por defecto se guarda el nombre de la
 // meta y "—" para un espacio vacío. Por eso una meta se busca primero por id y luego por nombre.
 
-/// "Ninguna": deja vacío ese espacio de "Mis metas". Se ve "—" cuando viene por defecto.
+/// "Ninguna": deja vacío ese espacio de "Mis metas" (se elige en el menú).
 let noGoalId = "—"
 
 enum GoalOptions {
@@ -82,10 +82,13 @@ enum GoalOptions {
   }
 
   /// Al agregar el widget, el espacio n trae la meta n de la lista; si no hay tantas, queda vacío.
+  /// Si no hay tantas metas, la fila dice "Elegir" (iOS muestra el valor por defecto tal cual); como
+  /// no coincide con ninguna meta, ese espacio toma la siguiente meta que se cree. "Ninguna" se elige
+  /// a mano en el menú.
   static func defaultId(slot: Int, allowNone: Bool) -> String? {
     let goals = ordered()
     if slot < goals.count { return goals[slot].name }
-    return allowNone ? noGoalId : nil
+    return L.t("Elegir", "Select")
   }
 
   /// La meta de un valor guardado: el id (elegido en el menú) o el nombre (valor por defecto).
@@ -122,33 +125,66 @@ struct GoalSlot5Options: DynamicOptionsProvider {
   func defaultResult() async -> String? { GoalOptions.defaultId(slot: 4, allowNone: true) }
 }
 
-/// Flujos distintos por tamaño: el pequeño elige 1 meta, el mediano 3 y el grande 5.
+/// Cómo se ven las metas del pequeño en StandBy.
+enum StandByStyle: String, AppEnum {
+  case rings
+  case bars
+
+  static var typeDisplayRepresentation: TypeDisplayRepresentation = "Style"
+  static var caseDisplayRepresentations: [StandByStyle: DisplayRepresentation] = [
+    .rings: "Rings",
+    .bars: "Bars",
+  ]
+}
+
+/// Flujos distintos por tamaño: el pequeño elige 1 meta (y 3 más que solo se ven en StandBy), el
+/// mediano 3 y el grande 5.
 struct SelectGoalsIntent: WidgetConfigurationIntent {
   static var title: LocalizedStringResource = "Choose goals"
-  static var description = IntentDescription("Pick which goals the widget shows.")
+  static var description = IntentDescription("Pick which goals the widget shows. The small widget shows goal 1 on the Home Screen and up to 4 in StandBy.")
 
-  @Parameter(title: "View", optionsProvider: GoalOptionsProvider())
+  @Parameter(title: "Goal 1", optionsProvider: GoalOptionsProvider())
   var goal: String?
 
-  @Parameter(title: "View 1", optionsProvider: GoalOptionsProvider())
+  // Solo del pequeño: se ven en StandBy, junto a la meta 1. Aparte de goal2…goal4 para que cada
+  // tamaño guarde lo suyo y el nombre diga dónde se ven.
+  @Parameter(title: "Goal 2 · StandBy", optionsProvider: GoalSlot2Options())
+  var standby2: String?
+
+  @Parameter(title: "Goal 3 · StandBy", optionsProvider: GoalSlot3Options())
+  var standby3: String?
+
+  @Parameter(title: "Goal 4 · StandBy", optionsProvider: GoalSlot4Options())
+  var standby4: String?
+
+  @Parameter(title: "Style · StandBy", default: .rings)
+  var standbyStyle: StandByStyle
+
+  @Parameter(title: "Goal 1", optionsProvider: GoalOptionsProvider())
   var goal1: String?
 
-  @Parameter(title: "View 2", optionsProvider: GoalSlot2Options())
+  @Parameter(title: "Goal 2", optionsProvider: GoalSlot2Options())
   var goal2: String?
 
-  @Parameter(title: "View 3", optionsProvider: GoalSlot3Options())
+  @Parameter(title: "Goal 3", optionsProvider: GoalSlot3Options())
   var goal3: String?
 
-  @Parameter(title: "View 4", optionsProvider: GoalSlot4Options())
+  @Parameter(title: "Goal 4", optionsProvider: GoalSlot4Options())
   var goal4: String?
 
-  @Parameter(title: "View 5", optionsProvider: GoalSlot5Options())
+  @Parameter(title: "Goal 5", optionsProvider: GoalSlot5Options())
   var goal5: String?
 
   static var parameterSummary: some ParameterSummary {
     Switch(.widgetFamily) {
       Case(.systemSmall) {
-        Summary { \.$goal }
+        Summary {
+          \.$goal
+          \.$standby2
+          \.$standby3
+          \.$standby4
+          \.$standbyStyle
+        }
       }
       Case(.systemMedium) {
         Summary {
@@ -179,6 +215,9 @@ struct SelectGoalsIntent: WidgetConfigurationIntent {
     default: [goal1, goal2, goal3, goal4, goal5]
     }
   }
+
+  /// Las 4 metas del pequeño en StandBy; la primera es la misma de la pantalla de inicio.
+  var standbyIds: [String?] { [goal, standby2, standby3, standby4] }
 }
 
 // MARK: - Línea de tiempo
@@ -190,6 +229,9 @@ struct GoalsEntry: TimelineEntry {
   let activeCount: Int
   let completedCount: Int
   var locked = false
+  /// En StandBy el pequeño muestra hasta 4 metas: Meta 1 y las tres "· StandBy" de "Editar widget".
+  var standbyGoals: [GoalItem] = []
+  var standbyStyle: StandByStyle = .rings
 }
 
 /// Las metas de cada espacio, en orden. "Ninguna" deja el espacio vacío. Un espacio sin valor o con
@@ -217,17 +259,25 @@ struct GoalsProvider: AppIntentTimelineProvider {
     let all = useSamples ? GoalItem.samples : stored
     let ordered = useSamples ? all : GoalOptions.ordered(all)
     let ids = useSamples ? configuration.chosenIds(for: family).map { _ in nil } : configuration.chosenIds(for: family)
+    let goals = resolveGoals(ids, ordered: ordered)
+    var standby: [GoalItem] = []
+    if family == .systemSmall {
+      let standbyIds = useSamples ? configuration.standbyIds.map { _ in nil } : configuration.standbyIds
+      standby = resolveGoals(standbyIds, ordered: ordered)
+    }
     return GoalsEntry(
       date: date,
-      goals: resolveGoals(ids, ordered: ordered),
+      goals: goals,
       activeCount: all.filter { !$0.completed }.count,
       completedCount: all.filter(\.completed).count,
-      locked: preview ? false : ProAccess.isLocked(at: date)
+      locked: preview ? false : ProAccess.isLocked(at: date),
+      standbyGoals: standby,
+      standbyStyle: configuration.standbyStyle
     )
   }
 
   func placeholder(in context: Context) -> GoalsEntry {
-    GoalsEntry(date: .now, goals: GoalItem.samples, activeCount: 5, completedCount: 0)
+    GoalsEntry(date: .now, goals: GoalItem.samples, activeCount: 5, completedCount: 0, standbyGoals: Array(GoalItem.samples.prefix(4)))
   }
 
   func snapshot(for configuration: SelectGoalsIntent, in context: Context) async -> GoalsEntry {
@@ -355,7 +405,7 @@ struct GoalList: View {
   }
 }
 
-/// Pequeño: una sola meta, con su color e ícono (también es el que se ve en StandBy).
+/// Pequeño: una sola meta, con su color e ícono (en StandBy, solo si hay una meta).
 struct SmallGoalView: View {
   let goal: GoalItem
 
@@ -423,8 +473,116 @@ struct LargeGoalsView: View {
   }
 }
 
+/// StandBy: hasta 4 metas en anillos de 2×2, cada una con su color y el porcentaje adentro.
+/// El pequeño no admite enlaces por meta, así que todo el widget abre la app.
+struct StandByRingsView: View {
+  let goals: [GoalItem]
+
+  var body: some View {
+    Grid(horizontalSpacing: 10, verticalSpacing: 8) {
+      GridRow {
+        cell(at: 0)
+        cell(at: 1)
+      }
+      GridRow {
+        cell(at: 2)
+        cell(at: 3)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func cell(at index: Int) -> some View {
+    if index < goals.count {
+      StandByRing(goal: goals[index])
+    } else {
+      Color.clear
+    }
+  }
+}
+
+struct StandByRing: View {
+  let goal: GoalItem
+
+  var body: some View {
+    VStack(spacing: 4) {
+      ZStack {
+        Circle().stroke(goal.tint.opacity(0.18), lineWidth: 6)
+        if goal.progress > 0 {
+          Circle()
+            .trim(from: 0, to: min(goal.progress, 1))
+            .stroke(goal.tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            .rotationEffect(.degrees(-90))
+            .shadow(color: goal.tint.opacity(0.6), radius: 4)
+        }
+        if goal.completed {
+          Image(systemName: "checkmark").font(.system(size: 16, weight: .bold)).foregroundStyle(goal.tint)
+        } else {
+          Text("\(goal.percent)%")
+            .font(Orbe.semibold(14))
+            .foregroundStyle(Orbe.strong)
+            .minimumScaleFactor(0.6)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+        }
+      }
+      .aspectRatio(1, contentMode: .fit)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .padding(3)
+      Text(goal.name)
+        .font(Orbe.medium(10))
+        .foregroundStyle(goal.tint)
+        .lineLimit(1)
+    }
+  }
+}
+
+/// StandBy: hasta 4 metas en filas con nombre, porcentaje y barra.
+struct StandByBarsView: View {
+  let goals: [GoalItem]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      ForEach(goals.prefix(4)) { goal in
+        VStack(alignment: .leading, spacing: 4) {
+          HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(goal.name)
+              .font(Orbe.medium(11))
+              .foregroundStyle(goal.tint)
+              .lineLimit(1)
+            Spacer(minLength: 4)
+            if goal.completed {
+              Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(goal.tint)
+            } else {
+              Text("\(goal.percent)%")
+                .font(Orbe.semibold(12))
+                .foregroundStyle(Orbe.strong)
+                .lineLimit(1)
+            }
+          }
+          GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+              Capsule().fill(Color.white.opacity(0.12))
+              if goal.progress > 0 {
+                Capsule()
+                  .fill(goal.tint)
+                  .frame(width: max(proxy.size.width * min(goal.progress, 1), 6))
+                  .shadow(color: goal.tint.opacity(0.6), radius: 3)
+              }
+            }
+          }
+          .frame(height: 6)
+        }
+        .frame(maxHeight: .infinity)
+      }
+    }
+  }
+}
+
 struct GoalsView: View {
   @Environment(\.widgetFamily) private var family
+  /// Falso en StandBy: ahí el widget se muestra sin fondo y ampliado.
+  @Environment(\.showsWidgetContainerBackground) private var showsBackground
   let entry: GoalsEntry
 
   var body: some View {
@@ -433,6 +591,14 @@ struct GoalsView: View {
         LockedWidget().widgetURL(URL(string: "brote:///paywall"))
       } else if entry.goals.isEmpty {
         EmptyWidget().widgetURL(URL(string: "brote:///"))
+      } else if family == .systemSmall, !showsBackground, entry.standbyGoals.count > 1 {
+        Group {
+          switch entry.standbyStyle {
+          case .rings: StandByRingsView(goals: entry.standbyGoals)
+          case .bars: StandByBarsView(goals: entry.standbyGoals)
+          }
+        }
+        .widgetURL(URL(string: "brote:///"))
       } else if family == .systemSmall, let goal = entry.goals.first {
         // El pequeño no admite enlaces por fila: todo el widget abre la meta.
         SmallGoalView(goal: goal).widgetURL(goalURL(goal))
