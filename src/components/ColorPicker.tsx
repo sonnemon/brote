@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStrings } from '@/i18n';
-import { alpha, colors, extendedGoalColors, goalColors } from '@/theme/tokens';
+import { alpha, colors, extendedGoalColors, goalColors, readable } from '@/theme/tokens';
 
 import { GoalIcon } from './GoalIcon';
 import { Icon } from './Icon';
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: { paddingHorizontal: 20, paddingTop: 4, gap: 22 },
+  content: { ...readable, paddingHorizontal: 20, paddingTop: 4, gap: 22 },
   preview: { alignItems: 'center', gap: 8, paddingVertical: 8 },
   previewIcon: { width: 72, height: 72, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   group: { gap: 10 },

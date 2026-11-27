@@ -8,11 +8,12 @@ import { Icon } from '@/components/Icon';
 import { NebulaBackground } from '@/components/NebulaBackground';
 import { T } from '@/components/T';
 import { Field } from '@/components/ui';
+import { WidePanel } from '@/components/WidePanel';
 import { CloudNotConfiguredError, sendEmailCode, verifyEmailCode } from '@/db/account';
 import { markOnboarded } from '@/db/store';
 import { isReviewEmail, isValidEmail } from '@/lib/purchases';
 import { strings, useStrings } from '@/i18n';
-import { colors } from '@/theme/tokens';
+import { colors, readable } from '@/theme/tokens';
 
 /** Si se abrió por enlace no hay pantalla detrás: se va al inicio. */
 function leave() {
@@ -29,7 +30,7 @@ function errorMessage(error: unknown, fallback: string): string {
  * su Pro y sus metas desde la nube. `mode=purchase` va antes de comprar o restaurar Pro, que siempre
  * queda en una cuenta. `from=onboarding` salta la bienvenida al terminar.
  */
-export default function AuthScreen() {
+function AuthScreen() {
   const insets = useSafeAreaInsets();
   const s = useStrings();
   const { mode, from } = useLocalSearchParams<{ mode?: string; from?: string }>();
@@ -204,7 +205,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  content: { paddingHorizontal: 20, gap: 20 },
+  content: { ...readable, paddingHorizontal: 20, gap: 20 },
   icon: {
     width: 60,
     height: 60,
@@ -217,6 +218,15 @@ const styles = StyleSheet.create({
   },
   copy: { gap: 8 },
   lead: { lineHeight: 20 },
-  footer: { paddingHorizontal: 20, paddingTop: 8, alignItems: 'center', gap: 14 },
+  footer: { ...readable, paddingHorizontal: 20, paddingTop: 8, alignItems: 'center', gap: 14 },
   stretch: { alignSelf: 'stretch' },
 });
+
+/** En iPad se muestra como tarjeta centrada; en iPhone, a pantalla completa como siempre. */
+export default function AuthScreenRoute() {
+  return (
+    <WidePanel>
+      <AuthScreen />
+    </WidePanel>
+  );
+}

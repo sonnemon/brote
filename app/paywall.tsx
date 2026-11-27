@@ -10,12 +10,13 @@ import { Icon, type UiIconName } from '@/components/Icon';
 import { NebulaBackground } from '@/components/NebulaBackground';
 import { T } from '@/components/T';
 import { RoundButton } from '@/components/ui';
+import { WidePanel } from '@/components/WidePanel';
 import { purchasePlan, restorePurchases, useAccount } from '@/db/account';
 import { requestPermissionOnPlusActivated } from '@/db/reminders';
 import { getLifetimePriceString } from '@/db/revenuecat';
 import { lifetimePrice, PurchaseCancelledError, PurchasesUnavailableError } from '@/lib/purchases';
 import { strings, useStrings } from '@/i18n';
-import { brandFont, colors } from '@/theme/tokens';
+import { brandFont, colors, readable } from '@/theme/tokens';
 
 /** Mismo orden que `paywall.features` en i18n. */
 const FEATURES: { free: boolean; icon?: UiIconName; iconColor?: string }[] = [
@@ -34,7 +35,7 @@ function openLegal(url: string | undefined) {
   else Alert.alert('Brote Pro', strings().paywall.soon);
 }
 
-export default function PaywallScreen() {
+function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const s = useStrings();
   const { email, trialDaysLeft, purchased, cloudConfigured } = useAccount();
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   stretch: { alignSelf: 'stretch' },
-  content: { paddingHorizontal: 20, paddingBottom: 12, gap: 16 },
+  content: { ...readable, paddingHorizontal: 20, paddingBottom: 12, gap: 16 },
   nav: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   hero: { alignItems: 'center', gap: 8 },
   brand: {
@@ -286,6 +287,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  footer: { paddingHorizontal: 20, paddingTop: 8, alignItems: 'center', gap: 8 },
+  footer: { ...readable, paddingHorizontal: 20, paddingTop: 8, alignItems: 'center', gap: 8 },
   legal: { flexDirection: 'row', gap: 14 },
 });
+
+/** En iPad se muestra como tarjeta centrada; en iPhone, a pantalla completa como siempre. */
+export default function PaywallScreenRoute() {
+  return (
+    <WidePanel>
+      <PaywallScreen />
+    </WidePanel>
+  );
+}

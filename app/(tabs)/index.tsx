@@ -14,7 +14,8 @@ import { useGoals, type GoalView } from '@/db/store';
 import { useStrings } from '@/i18n';
 import { formatCurrentOfTarget, formatDayMonth, formatPercent, greeting } from '@/lib/format';
 import { isCompleted, streakDays } from '@/lib/progress';
-import { alpha, colors } from '@/theme/tokens';
+import { useLayout, WIDE_CONTENT_WIDTH } from '@/theme/layout';
+import { alpha, colors, readable } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -23,24 +24,41 @@ export default function HomeScreen() {
   const now = new Date();
   const active = goals.filter((goal) => !isCompleted(goal.progress)).length;
   const streak = goals.reduce((best, goal) => Math.max(best, streakDays(goal.entries, goal.frequency, now)), 0);
+  const { wide, columns, cardWidth, gap } = useLayout();
 
   return (
     <View style={styles.screen}>
       <NebulaBackground variant={0} />
       <FlatList
+        // Cambiar de columnas (al girar el iPad) obliga a montar la lista de nuevo.
+        key={columns}
         data={goals}
+        numColumns={columns}
         keyExtractor={(goal) => goal.id}
-        renderItem={({ item }) => <GoalCard goal={item} />}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: TAB_BAR_SPACE }]}
+        renderItem={({ item }) =>
+          wide ? (
+            <View style={{ width: cardWidth }}>
+              <GoalTile goal={item} />
+            </View>
+          ) : (
+            <GoalCard goal={item} />
+          )
+        }
+        columnWrapperStyle={columns > 1 ? { gap } : undefined}
+        contentContainerStyle={[
+          styles.content,
+          wide && styles.contentWide,
+          { gap, paddingTop: insets.top + (wide ? 24 : 8), paddingBottom: TAB_BAR_SPACE },
+        ]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.header}>
+          <View style={[styles.header, wide && styles.headerWide]}>
             <View style={styles.titleRow}>
               <View style={styles.titleText}>
-                <T size={14} color={colors.textSecondary}>
+                <T size={wide ? 16 : 14} color={colors.textSecondary}>
                   {greeting(now)}
                 </T>
-                <T size={30} weight={600} tracking={-0.02} color={colors.textStrong}>
+                <T size={wide ? 40 : 30} weight={600} tracking={-0.02} color={colors.textStrong}>
                   {s.home.title}
                 </T>
               </View>
@@ -124,6 +142,48 @@ function GoalCard({ goal }: { goal: GoalView }) {
   );
 }
 
+/** Tarjeta de la cuadrícula en iPad: anillo grande arriba y el detalle debajo. */
+function GoalTile({ goal }: { goal: GoalView }) {
+  const s = useStrings();
+  const down = goal.direction === 'down';
+  const deadline = goal.deadline ? formatDayMonth(new Date(goal.deadline)) : s.common.noDeadline;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${goal.name}, ${formatPercent(goal.progress)}`}
+      onPress={() => router.push(`/goal/${goal.id}`)}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <GlassCard style={styles.tile} radius={28}>
+        <View style={styles.tileTop}>
+          <View
+            style={[styles.tileIcon, { backgroundColor: alpha(goal.color, 0.14), borderColor: alpha(goal.color, 0.3) }]}
+          >
+            <GoalIcon name={goal.icon} color={goal.color} size={26} />
+          </View>
+          <Ring progress={goal.progress} size={104} strokeWidth={9} color={goal.color}>
+            <T size={22} weight={600}>
+              {formatPercent(goal.progress)}
+            </T>
+          </Ring>
+        </View>
+        <View style={styles.tileText}>
+          <T size={20} weight={600} numberOfLines={1}>
+            {goal.name}
+          </T>
+          <T size={13} color={goal.color}>
+            {down ? s.common.decreasingArrow : s.common.increasingArrow} · {deadline}
+          </T>
+          <T size={15} color={colors.textSecondary} numberOfLines={1}>
+            {formatCurrentOfTarget(goal.current, goal.target_value, goal.unit)}
+          </T>
+        </View>
+      </GlassCard>
+    </Pressable>
+  );
+}
+
 function EmptyState() {
   const s = useStrings();
   return (
@@ -144,8 +204,10 @@ function EmptyState() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: 20, gap: 12 },
+  content: { ...readable, paddingHorizontal: 20 },
+  contentWide: { maxWidth: WIDE_CONTENT_WIDTH },
   header: { gap: 16, marginBottom: 4 },
+  headerWide: { gap: 20, marginBottom: 12 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleText: { gap: 2 },
   profile: {
@@ -165,6 +227,10 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   goalIcon: { width: 46, height: 46, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   cardText: { flex: 1, gap: 4 },
+  tile: { padding: 22, gap: 18 },
+  tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  tileIcon: { width: 56, height: 56, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  tileText: { gap: 6 },
   empty: { alignItems: 'center', padding: 24, gap: 12, marginTop: 40 },
   emptyText: { textAlign: 'center', lineHeight: 20 },
   emptyButton: { alignSelf: 'stretch', marginTop: 8 },

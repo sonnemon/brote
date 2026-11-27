@@ -4,11 +4,11 @@ import Svg, { Circle, Defs, Line, LinearGradient, Polygon, Polyline, Stop } from
 
 import { colors, gradients } from '@/theme/tokens';
 
-const HEIGHT = 72;
+const DEFAULT_HEIGHT = 72;
 const PAD_X = 6;
 const PAD_Y = 8;
 
-export function WeeklyChart({ values }: { values: number[] }) {
+export function WeeklyChart({ values, height: HEIGHT = DEFAULT_HEIGHT }: { values: number[]; height?: number }) {
   const [width, setWidth] = useState(0);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -36,8 +36,8 @@ export function WeeklyChart({ values }: { values: number[] }) {
               <Stop offset="1" stopColor={gradients.progress[2]} />
             </LinearGradient>
           </Defs>
-          <Line x1={0} y1={24} x2={width} y2={24} stroke="rgba(201,182,255,0.08)" />
-          <Line x1={0} y1={48} x2={width} y2={48} stroke="rgba(201,182,255,0.08)" />
+          <Line x1={0} y1={HEIGHT / 3} x2={width} y2={HEIGHT / 3} stroke="rgba(201,182,255,0.08)" />
+          <Line x1={0} y1={(HEIGHT * 2) / 3} x2={width} y2={(HEIGHT * 2) / 3} stroke="rgba(201,182,255,0.08)" />
           <Polygon points={`${line} ${last.x},${HEIGHT} ${PAD_X},${HEIGHT}`} fill="url(#chartArea)" />
           {/* El gradiente necesita una caja con ancho y alto: en una línea plana se usa color sólido. */}
           <Polyline

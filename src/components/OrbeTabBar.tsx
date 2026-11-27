@@ -52,7 +52,7 @@ export function OrbeTabBar({ state, navigateToTab }: TabBarProps) {
   };
 
   return (
-    <View style={[styles.wrap, { bottom: Math.max(insets.bottom - 12, 12) }]}>
+    <View style={[styles.wrap, { bottom: Math.max(insets.bottom - 12, 12) }]} pointerEvents="box-none">
       <View style={styles.bar}>
         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, styles.tint]} />
@@ -69,8 +69,10 @@ export function OrbeTabBar({ state, navigateToTab }: TabBarProps) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 20, right: 20 },
+  wrap: { position: 'absolute', left: 20, right: 20, alignItems: 'center' },
   bar: {
+    width: '100%',
+    maxWidth: 440,
     height: 66,
     padding: 6,
     borderRadius: 33,

@@ -13,16 +13,17 @@ import { ReminderRow } from '@/components/ReminderRow';
 import { T } from '@/components/T';
 import { Toggle } from '@/components/Toggle';
 import { Field } from '@/components/ui';
+import { WidePanel } from '@/components/WidePanel';
 import { archiveGoal, deleteGoal, updateGoal, useGoal, type GoalView } from '@/db/store';
 import { editToUpdate, nextFrequency, validateEdit, type GoalEditDraft } from '@/lib/goalEdit';
 import { resolveIconKey, suggestIcons, withCurrent } from '@/lib/goalIcons';
 import { reminderFromColumns } from '@/lib/reminders';
 import { useStrings } from '@/i18n';
-import { colors } from '@/theme/tokens';
+import { colors, readable } from '@/theme/tokens';
 
 const DEFAULT_DEADLINE_MS = 12 * 7 * 86_400_000;
 
-export default function EditGoalScreen() {
+function EditGoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goal = useGoal(id);
   return goal ? <EditForm goal={goal} /> : null;
@@ -245,13 +246,22 @@ function EditForm({ goal }: { goal: GoalView }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  nav: { height: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  nav: { ...readable, height: 44, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   navSide: { width: 76 },
   navRight: { textAlign: 'right' },
-  content: { paddingHorizontal: 20, paddingTop: 12, gap: 16 },
+  content: { ...readable, paddingHorizontal: 20, paddingTop: 12, gap: 16 },
   block: { gap: 8 },
   notice: { flexDirection: 'row', gap: 6, paddingHorizontal: 4 },
   noticeText: { flex: 1, lineHeight: 17 },
   blockTitle: { paddingHorizontal: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });
+
+/** En iPad se muestra como tarjeta centrada; en iPhone, a pantalla completa como siempre. */
+export default function EditGoalScreenRoute() {
+  return (
+    <WidePanel>
+      <EditGoalScreen />
+    </WidePanel>
+  );
+}

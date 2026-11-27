@@ -21,7 +21,7 @@ import {
 import { defaultLogMode, lastAddedAmount, quickAmounts, type LogMode } from '@/lib/logAmounts';
 import { computeProgress, round2 } from '@/lib/progress';
 import { useStrings } from '@/i18n';
-import { colors, fonts } from '@/theme/tokens';
+import { colors, fonts, readable } from '@/theme/tokens';
 
 const INPUT_WIDTH_SLACK = 8;
 
@@ -198,7 +198,7 @@ function Pill({ icon, label, active, onPress }: { icon: 'calendar' | 'plus'; lab
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 28, paddingHorizontal: 20, paddingBottom: 32, gap: 18 },
+  content: { ...readable, paddingTop: 28, paddingHorizontal: 20, paddingBottom: 32, gap: 18 },
   header: { alignItems: 'center', gap: 4 },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stepButton: {

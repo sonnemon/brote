@@ -14,7 +14,7 @@ import { useGoal } from '@/db/store';
 import { completionDays, completionSummary } from '@/lib/completion';
 import { bestStreakDays } from '@/lib/progress';
 import { useStrings } from '@/i18n';
-import { colors, gradients } from '@/theme/tokens';
+import { colors, gradients, readable } from '@/theme/tokens';
 
 const SPARKLE = 'M12 2c.6 4.4 1.6 5.4 6 6-4.4.6-5.4 1.6-6 6-.6-4.4-1.6-5.4-6-6 4.4-.6 5.4-1.6 6-6z';
 
@@ -112,7 +112,7 @@ function Stat({ value, label, color, divider }: { value: number; label: string; 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { flex: 1, paddingHorizontal: 20, justifyContent: 'space-between' },
+  content: { ...readable, flex: 1, paddingHorizontal: 20, justifyContent: 'space-between' },
   top: { alignItems: 'center', gap: 24 },
   check: {
     width: 52,

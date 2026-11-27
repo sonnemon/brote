@@ -34,7 +34,7 @@ import {
 import { archiveGoal, useArchivedGoals } from '@/db/store';
 import type { TimeOfDay } from '@/lib/reminders';
 import { strings, useLang, useStrings, type Lang } from '@/i18n';
-import { colors } from '@/theme/tokens';
+import { colors, readable } from '@/theme/tokens';
 
 const LANGUAGES: { value: Lang; label: string }[] = [
   { value: 'es', label: 'ES' },
@@ -309,7 +309,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: 20, gap: 14 },
+  content: { ...readable, paddingHorizontal: 20, gap: 14 },
   title: { height: 44, lineHeight: 44 },
   footer: { alignItems: 'center', paddingTop: 4 },
   switch: {

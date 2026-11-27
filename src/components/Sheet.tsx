@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { useStrings } from '@/i18n';
-import { colors } from '@/theme/tokens';
+import { colors, readable } from '@/theme/tokens';
 
 import { T } from './T';
 
@@ -40,7 +40,7 @@ export function Sheet({ visible, title, onClose, children }: Props) {
 const styles = StyleSheet.create({
   sheet: { flex: 1, backgroundColor: '#17132F' },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, marginTop: 8, backgroundColor: 'rgba(201,182,255,0.3)' },
-  header: { height: 52, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { ...readable, height: 52, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   side: { width: 60 },
   done: { textAlign: 'right' },
 });

@@ -17,13 +17,14 @@ import { Ring } from '@/components/Ring';
 import { T } from '@/components/T';
 import { Toggle } from '@/components/Toggle';
 import { Field, ProgressBar, RoundButton, Segmented, StepBars } from '@/components/ui';
+import { WidePanel } from '@/components/WidePanel';
 import { createGoal } from '@/db/store';
 import { formatFullDate, formatPercent, formatSignedValue, formatValue, parseDecimal } from '@/lib/format';
 import { draftCurrent, draftToInput, validateFrom, validateWhat, type GoalDraft } from '@/lib/goalDraft';
 import { DEFAULT_ICON, suggestIcons, withCurrent } from '@/lib/goalIcons';
 import { computeProgress, suggestedPace, weeksUntil, type Direction, type Frequency } from '@/lib/progress';
 import { useStrings } from '@/i18n';
-import { colors } from '@/theme/tokens';
+import { colors, readable } from '@/theme/tokens';
 
 /** Unidades rápidas; páginas y horas se muestran (y se guardan) en el idioma activo. */
 const unitsFor = (s: { units: { pages: string; hours: string } }) => ['kg', 'km', 'S/', s.units.pages, s.units.hours, '%'];
@@ -53,7 +54,7 @@ function initialDraft(): GoalDraft {
   };
 }
 
-export default function NewGoalScreen() {
+function NewGoalScreen() {
   const insets = useSafeAreaInsets();
   const s = useStrings();
   const [step, setStep] = useState(1);
@@ -482,11 +483,11 @@ function SummaryRow({ label, value, color = colors.text }: { label: string; valu
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  top: { paddingHorizontal: 20, gap: 14 },
+  top: { ...readable, paddingHorizontal: 20, gap: 14 },
   nav: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   counter: { width: 44, textAlign: 'right' },
-  content: { padding: 20, gap: 20 },
-  footer: { paddingHorizontal: 20, paddingTop: 8 },
+  content: { ...readable, padding: 20, gap: 20 },
+  footer: { ...readable, paddingHorizontal: 20, paddingTop: 8 },
   titleGroup: { gap: 6 },
   lead: { lineHeight: 20 },
   group: { gap: 8 },
@@ -533,3 +534,12 @@ const styles = StyleSheet.create({
   summaryHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
 });
+
+/** En iPad se muestra como tarjeta centrada; en iPhone, a pantalla completa como siempre. */
+export default function NewGoalScreenRoute() {
+  return (
+    <WidePanel>
+      <NewGoalScreen />
+    </WidePanel>
+  );
+}

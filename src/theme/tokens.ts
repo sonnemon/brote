@@ -65,3 +65,11 @@ export function alpha(hex: string, opacity: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${opacity})`;
 }
+
+/**
+ * Ancho máximo del contenido. En iPhone no cambia nada; en iPad centra la columna para que textos y
+ * botones no se estiren a lo ancho de la pantalla.
+ */
+export const READABLE_WIDTH = 640;
+
+export const readable = { width: '100%', maxWidth: READABLE_WIDTH, alignSelf: 'center' } as const;
