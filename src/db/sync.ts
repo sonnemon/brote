@@ -85,9 +85,43 @@ function makePorts(client: SupabaseClient): SyncPorts {
   };
 }
 
-/** La primera vez que una cuenta sincroniza en este celular se sube todo lo local. */
+/**
+ * Borra metas y registros del celular y olvida de qué cuenta eran. Se usa al cerrar sesión: las metas
+ * son de la cuenta y siguen en su respaldo.
+ */
+export function clearLocalData() {
+  db.withTransactionSync(() => {
+    // Los registros primero: tienen llave foránea a goals.
+    for (const table of [...SYNC_ORDER].reverse()) {
+      db.runSync(`DELETE FROM ${table}`);
+      db.runSync('DELETE FROM kv WHERE key = ?', cursorKey(table));
+    }
+    db.runSync('DELETE FROM kv WHERE key = ?', SYNC_USER_KEY);
+  });
+}
+
+/** Deja las metas del celular sin dueño (al borrar la cuenta): se subirán a la próxima cuenta que entre. */
+export function forgetSyncUser() {
+  db.runSync('DELETE FROM kv WHERE key = ?', SYNC_USER_KEY);
+}
+
+/** Hay algo en el celular que no está en el respaldo de esta cuenta. */
+export function hasUnbackedChanges(userId: string): boolean {
+  if (getKv(SYNC_USER_KEY) !== userId) {
+    return SYNC_ORDER.some((table) => db.getFirstSync(`SELECT 1 FROM ${table} LIMIT 1`) !== null);
+  }
+  return SYNC_ORDER.some((table) => db.getFirstSync(`SELECT 1 FROM ${table} WHERE dirty = 1 LIMIT 1`) !== null);
+}
+
+/**
+ * Las metas sin dueño (creadas sin cuenta) se suben a la primera cuenta que sincroniza. Las de otra
+ * cuenta (de versiones que no las borraban al cerrar sesión) se quitan: siguen en el respaldo de esa
+ * cuenta y el servidor no dejaría subirlas a esta.
+ */
 function prepareForUser(userId: string) {
-  if (getKv(SYNC_USER_KEY) === userId) return;
+  const previous = getKv(SYNC_USER_KEY);
+  if (previous === userId) return;
+  if (previous) clearLocalData();
   db.withTransactionSync(() => {
     for (const table of SYNC_ORDER) {
       db.runSync(`UPDATE ${table} SET dirty = 1`);

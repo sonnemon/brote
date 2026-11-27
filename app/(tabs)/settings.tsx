@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActionSheetIOS, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Row, Section } from '@/components/ListGroup';
@@ -18,6 +18,7 @@ import {
   requestSync,
   setDevTrialEnded,
   signOut,
+  syncBeforeSignOut,
   useAccount,
   type Account,
 } from '@/db/account';
@@ -30,10 +31,8 @@ import {
   setDefaultReminderTime,
   setRemindersEnabled,
 } from '@/db/reminders';
-import { archiveGoal, useArchivedGoals, useGoals } from '@/db/store';
-import { getWidgetGoalId, setWidgetGoalId } from '@/db/widgets';
+import { archiveGoal, useArchivedGoals } from '@/db/store';
 import type { TimeOfDay } from '@/lib/reminders';
-import { selectWidgetGoal } from '@/lib/widgetData';
 import { strings, useLang, useStrings, type Lang } from '@/i18n';
 import { colors } from '@/theme/tokens';
 
@@ -91,21 +90,6 @@ export default function SettingsScreen() {
   const archived = useArchivedGoals();
 
   const account = useAccount();
-  const goals = useGoals();
-  const [widgetGoalId, setWidgetGoalIdState] = useState(getWidgetGoalId);
-  const widgetGoal = selectWidgetGoal(goals, widgetGoalId);
-
-  const chooseWidgetGoal = () => {
-    const names = goals.map((goal) => goal.name);
-    ActionSheetIOS.showActionSheetWithOptions(
-      { title: s.settings.widgetGoal, options: [...names, s.common.cancel], cancelButtonIndex: names.length, userInterfaceStyle: 'dark' },
-      (index) => {
-        if (index >= names.length) return;
-        setWidgetGoalId(goals[index].id);
-        setWidgetGoalIdState(goals[index].id);
-      },
-    );
-  };
   const [remindersOn, setRemindersOn] = useState(areRemindersEnabled);
   const [defaultTime, setDefaultTime] = useState(getDefaultReminderTime);
 
@@ -120,8 +104,15 @@ export default function SettingsScreen() {
     setDefaultTime(time);
   };
 
-  const confirmSignOut = () => {
-    Alert.alert(s.settings.signOut, s.settings.signOutText, [
+  const [signingOut, setSigningOut] = useState(false);
+
+  const confirmSignOut = async () => {
+    if (signingOut) return;
+    // Primero se respalda lo pendiente; si algo no se pudo subir, se avisa que se perderá.
+    setSigningOut(true);
+    const backedUp = await syncBeforeSignOut();
+    setSigningOut(false);
+    Alert.alert(s.settings.signOut, backedUp ? s.settings.signOutText : s.settings.signOutUnsaved, [
       { text: s.common.cancel, style: 'cancel' },
       { text: s.settings.signOut, style: 'destructive', onPress: () => void signOut() },
     ]);
@@ -217,19 +208,6 @@ export default function SettingsScreen() {
           <Row label={s.settings.language} icon="globe" iconColor={colors.cyan} right={<LanguageSwitch />} last />
         </Section>
 
-        {goals.length > 0 && (
-          <Section title={s.settings.widgets}>
-            <Row
-              label={s.settings.widgetGoal}
-              icon="sprout"
-              value={account.isPlus ? widgetGoal?.name : undefined}
-              right={account.isPlus ? undefined : <PlusButton label={s.settings.unlockWidgets} />}
-              onPress={account.isPlus ? chooseWidgetGoal : openPlus}
-              last
-            />
-          </Section>
-        )}
-
         <Section title={s.settings.data}>
           {account.isPlus ? (
             <Row
@@ -248,7 +226,13 @@ export default function SettingsScreen() {
             />
           )}
           {account.email ? (
-            <Row label={account.email} icon="user" value={s.settings.signOut} onPress={confirmSignOut} />
+            <Row
+              label={account.email}
+              icon="user"
+              value={signingOut ? s.settings.syncing : s.settings.signOut}
+              onPress={() => void confirmSignOut()}
+              dimmed={signingOut}
+            />
           ) : (
             // Con Pro activo, "Respaldo en la nube" ya lleva a iniciar sesión.
             !account.isPlus && <Row

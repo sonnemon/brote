@@ -10,9 +10,15 @@ import { T } from '@/components/T';
 import { Field } from '@/components/ui';
 import { CloudNotConfiguredError, sendEmailCode, verifyEmailCode } from '@/db/account';
 import { markOnboarded } from '@/db/store';
-import { isValidEmail } from '@/lib/purchases';
+import { isReviewEmail, isValidEmail } from '@/lib/purchases';
 import { strings, useStrings } from '@/i18n';
 import { colors } from '@/theme/tokens';
+
+/** Si se abrió por enlace no hay pantalla detrás: se va al inicio. */
+function leave() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/');
+}
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof CloudNotConfiguredError ? strings().auth.notConfigured : fallback;
@@ -35,6 +41,8 @@ export default function AuthScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // La cuenta de revisión de App Store escribe una contraseña en lugar del código.
+  const review = isReviewEmail(email);
 
   const send = async () => {
     if (!isValidEmail(email)) {
@@ -66,7 +74,7 @@ export default function AuthScreen() {
         markOnboarded();
         router.replace('/');
       } else {
-        router.back();
+        leave();
       }
     } catch (e) {
       setError(errorMessage(e, s.auth.wrongCode));
@@ -93,7 +101,9 @@ export default function AuthScreen() {
             </T>
             <T size={14} color={colors.textSecondary} style={styles.lead}>
               {codeSent
-                ? s.auth.sent(email.trim())
+                ? review
+                  ? s.auth.reviewPassword
+                  : s.auth.sent(email.trim())
                 : signIn
                   ? s.auth.signInExplain
                   : purchase
@@ -103,19 +113,36 @@ export default function AuthScreen() {
           </View>
 
           {codeSent ? (
-            <Field
-              label={s.auth.code}
-              value={code}
-              onChangeText={(text) => {
-                setCode(text);
-                setError(null);
-              }}
-              keyboardType="number-pad"
-              textContentType="oneTimeCode"
-              autoComplete="one-time-code"
-              maxLength={8}
-              autoFocus
-            />
+            review ? (
+              <Field
+                label={s.auth.password}
+                value={code}
+                onChangeText={(text) => {
+                  setCode(text);
+                  setError(null);
+                }}
+                secureTextEntry
+                textContentType="password"
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+              />
+            ) : (
+              <Field
+                label={s.auth.code}
+                value={code}
+                onChangeText={(text) => {
+                  setCode(text);
+                  setError(null);
+                }}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                maxLength={8}
+                autoFocus
+              />
+            )
           ) : (
             <Field
               label={s.auth.email}
@@ -163,7 +190,7 @@ export default function AuthScreen() {
             disabled={busy}
             style={styles.stretch}
           />
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.back()}>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={leave}>
             <T size={14} color={colors.textSecondary}>
               {s.reminders.notNow}
             </T>

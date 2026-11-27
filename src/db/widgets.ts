@@ -5,7 +5,7 @@ import { getLang, subscribeLang } from '@/i18n';
 import { buildWidgetGoalItems, buildWidgetSnapshot, selectWidgetGoal } from '@/lib/widgetData';
 
 import { getAccount, subscribeAccount } from './account';
-import { getKv, setKv } from './repo';
+import { getKv } from './repo';
 import { getAllGoals, subscribeGoals } from './store';
 
 const APP_GROUP = 'group.dev.carloshmitma.brote';
@@ -24,11 +24,6 @@ const DEBOUNCE_MS = 500;
 const storage = new ExtensionStorage(APP_GROUP);
 
 export const getWidgetGoalId = () => getKv(SELECTED_KEY);
-
-export function setWidgetGoalId(goalId: string) {
-  setKv(SELECTED_KEY, goalId);
-  publish();
-}
 
 /** La meta que muestran los widgets ahora mismo. */
 export const getCurrentWidgetGoal = () => selectWidgetGoal(getAllGoals(), getWidgetGoalId());

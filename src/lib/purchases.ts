@@ -88,3 +88,13 @@ export function latestPlusUntil(...values: (string | null)[]): string | null {
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
+
+/**
+ * Cuenta para el revisor de App Store: no puede recibir el código por correo, así que entra con
+ * contraseña. El usuario se crea a mano en Supabase (Authentication → Add user, con contraseña).
+ */
+export const REVIEW_EMAIL = 'appreview@carloshmitma.dev';
+
+export function isReviewEmail(email: string): boolean {
+  return email.trim().toLowerCase() === REVIEW_EMAIL;
+}

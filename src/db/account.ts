@@ -6,6 +6,7 @@ import {
   createDevPurchases,
   createUnavailablePurchases,
   isPlusActive,
+  isReviewEmail,
   isTrialActive,
   latestPlusUntil,
   trialDaysLeft,
@@ -24,7 +25,7 @@ import {
 } from './revenuecat';
 import { reloadGoals, setAfterWrite } from './store';
 import { supabase } from './supabase';
-import { performSync } from './sync';
+import { clearLocalData, forgetSyncUser, hasUnbackedChanges, performSync } from './sync';
 
 const DEV_PLUS_KEY = 'dev_plus_until';
 const SERVER_PLUS_KEY = 'server_plus_until';
@@ -276,6 +277,11 @@ function requireClient() {
 }
 
 export async function sendEmailCode(email: string) {
+  // La cuenta de revisión entra con contraseña: no se envía código.
+  if (isReviewEmail(email)) {
+    requireClient();
+    return;
+  }
   const { error } = await requireClient().auth.signInWithOtp({
     email: email.trim(),
     options: { shouldCreateUser: true },
@@ -284,14 +290,47 @@ export async function sendEmailCode(email: string) {
 }
 
 export async function verifyEmailCode(email: string, token: string) {
+  if (isReviewEmail(email)) {
+    const { error } = await requireClient().auth.signInWithPassword({ email: email.trim(), password: token });
+    if (error) throw error;
+    return;
+  }
   const { error } = await requireClient().auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'email' });
   if (error) throw error;
 }
 
-/** Cierra la sesión; los datos siguen en el celular. */
+async function waitForSync() {
+  while (running) await new Promise((resolve) => setTimeout(resolve, 100));
+}
+
+/**
+ * Antes de cerrar sesión: sube lo pendiente. Devuelve false si queda algo sin respaldar (sin red o sin
+ * Pro), para avisar que se perderá.
+ */
+export async function syncBeforeSignOut(): Promise<boolean> {
+  if (!session) return true;
+  if (debounce) {
+    clearTimeout(debounce);
+    debounce = null;
+  }
+  await waitForSync();
+  await runSyncNow();
+  await waitForSync();
+  return session ? !hasUnbackedChanges(session.user.id) : true;
+}
+
+/** Cierra la sesión y quita las metas del celular: son de la cuenta y siguen en su respaldo. */
 export async function signOut() {
+  if (debounce) {
+    clearTimeout(debounce);
+    debounce = null;
+  }
+  await waitForSync();
   await requireClient().auth.signOut({ scope: 'local' });
+  clearLocalData();
   deleteKv(SERVER_PLUS_KEY);
+  deleteKv(LAST_SYNC_KEY);
+  reloadGoals();
   publish();
 }
 
@@ -310,6 +349,8 @@ export async function deleteAccount() {
   if (error) throw error;
   // El usuario ya no existe: se limpia la sesión local sin llamar al servidor.
   await client.auth.signOut({ scope: 'local' });
+  // Las metas se quedan en el celular, sin dueño: si entra otra cuenta, se suben a ella.
+  forgetSyncUser();
   deleteKv(SERVER_PLUS_KEY);
   deleteKv(LAST_SYNC_KEY);
   publish();
